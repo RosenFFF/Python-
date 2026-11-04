@@ -1,0 +1,10 @@
+{
+  "name": "颐护通",
+  "short_name": "颐护通",
+  "description": "社区智慧养老服务与健康监测平台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f3ec",
+  "theme_color": "#1f5e57",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

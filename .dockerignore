@@ -1,0 +1,16 @@
+.git
+.venv
+data
+backups
+dist
+docs
+tools
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+frontend/node_modules
+backend/static
+backend/tests
+.env
+.env.docker

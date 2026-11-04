@@ -1,0 +1,43 @@
+[project]
+name = "yihu-care"
+version = "1.0.0"
+description = "颐护通：社区智慧养老服务与健康监测平台"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "C4", "SIM"]
+ignore = [
+    "S101",   # 测试里允许 assert
+    "S311",   # random 只用于演示数据和抽样，抽样种子来自 SystemRandom
+    "UP042",  # 保持枚举写法
+    "B008",   # FastAPI 的 Depends 默认参数
+    "B905",   # zip 长度由上下文保证
+    "SIM102",
+    "SIM108",
+]
+
+[tool.ruff.lint.isort]
+known-third-party = ["alembic"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "B", "E501", "E741"]
+"app/seed/*" = ["S", "E501"]
+"app/services/backup_service.py" = ["S608"]
+"app/domain/enums.py" = ["S105", "E501"]  # PASS 是抽查结果枚举，不是口令
+"app/services/rbac_defaults.py" = ["E501"]
+"app/services/system_defaults.py" = ["E501"]
+"scripts/*" = ["S310"]  # 模拟脚本的 URL 由命令行参数指定
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/seed/*", "app/cli.py"]

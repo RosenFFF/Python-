@@ -1,0 +1,24 @@
+# 一键启动：docker compose up -d --build
+# 启动前先复制 deploy/docker.env.example 为 .env.docker，并填入随机密钥（生成方法见文件内说明）。
+services:
+  yihu:
+    build: .
+    image: yihu-care:1.0.0
+    container_name: yihu-care
+    restart: unless-stopped
+    env_file: .env.docker
+    ports:
+      - "8000:8000"
+    volumes:
+      - yihu-data:/app/data
+      # 备份和数据分开挂载，生产环境建议改成独立磁盘路径
+      - yihu-backups:/app/backups
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  yihu-data:
+  yihu-backups:
