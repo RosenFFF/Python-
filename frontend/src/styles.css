@@ -34,6 +34,7 @@
   --radius: 12px;
   --side-width: 212px;
   --ease: cubic-bezier(.22, .8, .24, 1);
+  --sky: linear-gradient(180deg, #e6eef8 0%, #f4f7fb 58%, #fbf3e4 100%);
   font-size: 15px;
 }
 
@@ -294,7 +295,7 @@ tr.flag-yellow td:first-child { box-shadow: inset 3px 0 0 #d9a400; }
 .chip:hover { background: var(--brand-100); color: var(--brand-900); }
 
 /* 登录页：一整幅清晨的社区，表单放在画面里 */
-.login { position: relative; min-height: 100%; overflow: hidden; background: linear-gradient(180deg, #e6eef8 0%, #f4f7fb 58%, #fbf3e4 100%); display: flex; flex-direction: column; }
+.login { position: relative; min-height: 100%; overflow: hidden; background: var(--sky); display: flex; flex-direction: column; }
 .login .brand { position: relative; z-index: 2; }
 .login-body { position: relative; z-index: 2; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 40px; align-items: center; max-width: 1180px; width: 100%; margin: 0 auto; padding: 0 40px 64px; }
 .login-copy { align-self: start; padding-top: 9vh; }
@@ -303,8 +304,6 @@ tr.flag-yellow td:first-child { box-shadow: inset 3px 0 0 #d9a400; }
 .login-panel { background: #fff; border-radius: 18px; padding: 28px 30px; box-shadow: 0 24px 64px rgba(22, 58, 107, .14); display: flex; flex-direction: column; gap: 14px; }
 .login-panel h2 { font-family: 'Yihu Display', 'Songti SC', 'STSong', serif; font-size: 1.4rem; color: var(--brand-900); }
 .login-scene { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46vh; min-height: 260px; z-index: 1; display: block; }
-@keyframes sun-rise { from { transform: translateY(70px); } to { transform: none; } }
-.scene-sun { animation: sun-rise 1.6s var(--ease) both; }
 
 /* 页面过渡：只淡入淡出，不做上滑 */
 .page-enter-active { transition: opacity .16s ease-out; }
@@ -315,8 +314,12 @@ tr.flag-yellow td:first-child { box-shadow: inset 3px 0 0 #d9a400; }
 .shell-enter-from, .shell-leave-to { opacity: 0; }
 
 /* 进入动画 */
-.intro { position: fixed; inset: 0; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #e6eef8; cursor: pointer; }
-.intro svg { display: block; overflow: visible; }
+.intro { position: fixed; inset: 0; z-index: 500; cursor: pointer; }
+.intro-backdrop { position: absolute; inset: 0; overflow: hidden; background: var(--sky); }
+.intro-night { position: absolute; inset: 0; background: #0f2748; }
+.intro-backdrop .login-scene { overflow: visible; }
+.intro-lockup { position: absolute; left: 0; right: 0; top: 34%; width: max-content; margin: 0 auto; transform-origin: 0 0; }
+:root[data-intro] .brand { visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }

@@ -15,6 +15,7 @@ const bare = computed(() => route.meta.bare)
 const INTRO_KEY = 'yihu.intro'
 function shouldPlayIntro() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false
+  if (new URLSearchParams(location.search).has('intro')) return true
   try {
     if (sessionStorage.getItem(INTRO_KEY)) return false
     sessionStorage.setItem(INTRO_KEY, '1')

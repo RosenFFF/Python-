@@ -5,7 +5,7 @@ defineProps({ size: { type: Number, default: 34 }, wordmark: { type: Boolean, de
 </script>
 
 <template>
-  <span class="row" style="gap: 10px; flex-wrap: nowrap" role="img" aria-label="颐护通">
+  <span class="row" :style="{ gap: `${size * 0.3}px`, flexWrap: 'nowrap' }" role="img" aria-label="颐护通">
     <svg data-brand-mark viewBox="0 0 64 64" :width="size" :height="size" style="display: block; flex: none">
       <circle cx="32" cy="32" r="31" fill="#25518F" />
       <path d="M13 30 32 14l19 16" fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round" />

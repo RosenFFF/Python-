@@ -1,75 +1,99 @@
 <script setup>
-// 进入动画（约 1.4 秒，每个浏览器会话只播一次）：
-// 屋檐和托举弧线画出，暖阳升起，标志再飞到左上角的品牌位，和页面上的 logo 重合。
-// 减少动效偏好下不播放；点击可跳过。
+// 进入动画（约 1.8 秒）：社区天亮。
+// 夜色里窗户一盏盏亮起，太阳从屋顶后升起，天空和楼房随之变亮，标志飞到左上角。
+// 画面终点和登录页完全一致，所以揭开时看不到切换；已登录时则淡入工作台。
+// 每个浏览器会话播放一次，点击可跳过，减少动效偏好下不播放。
 import { onMounted, ref } from 'vue'
-import { WORDMARK_PATHS, WORDMARK_WIDTH } from '../brand'
+import CommunityScene from './CommunityScene.vue'
+import Logo from './Logo.vue'
 
 const emit = defineEmits(['done'])
-const root = ref(null)
-const mark = ref(null)
-const roof = ref(null)
-const arc = ref(null)
-const sun = ref(null)
-const word = ref(null)
-const SIZE = 104
+const backdrop = ref(null)
+const night = ref(null)
+const lockup = ref(null)
+const MARK_SIZE = 72
 let finished = false
+let timers = []
 
 function finish() {
   if (finished) return
   finished = true
+  timers.forEach(clearTimeout)
+  delete document.documentElement.dataset.intro
   emit('done')
 }
 
-function draw(el, delay, duration) {
-  const length = el.getTotalLength()
-  el.style.strokeDasharray = length
-  return el.animate([{ strokeDashoffset: length }, { strokeDashoffset: 0 }], { duration, delay, easing: 'cubic-bezier(.5,0,.2,1)', fill: 'both' })
+const later = (fn, ms) => timers.push(setTimeout(fn, ms))
+const DAWN = { delay: 400, duration: 900, easing: 'ease-in-out', fill: 'both' }
+
+function playScene() {
+  const scene = backdrop.value
+  // 夜空经过饱和的晨蓝再变亮，避免深色直接淡出时发灰
+  night.value.animate([
+    { backgroundColor: '#0f2748', opacity: 1 },
+    { backgroundColor: '#3f6cab', opacity: 1, offset: .42 },
+    { backgroundColor: '#b4cce8', opacity: .9, offset: .76 },
+    { backgroundColor: '#e6eef8', opacity: 0 },
+  ], DAWN)
+  // 楼房从夜色剪影变成白天的颜色
+  for (const [selector, dark, day] of [
+    ['.scene-far', '#1a3b6c', '#C9D8EC'],
+    ['.scene-mid', '#142f57', '#8FABD3'],
+    ['.scene-near', '#0c2240', '#25518F'],
+  ]) {
+    scene.querySelector(selector).animate([{ fill: dark }, { fill: day }], DAWN)
+  }
+  // 窗户由左至右错落亮起
+  const order = [3, 8, 0, 11, 5, 13, 1, 9, 6, 2, 12, 7, 4, 10]
+  scene.querySelectorAll('.scene-window').forEach((el, index) => {
+    el.animate([{ opacity: 0 }, { opacity: 1 }], { delay: 40 + order[index] * 34, duration: 120, easing: 'ease-out', fill: 'both' })
+  })
+  // 太阳从屋顶后升起，起点在画面之外
+  scene.querySelector('.scene-sun').animate(
+    [{ transform: 'translateY(240px)' }, { transform: 'none' }],
+    { delay: 320, duration: 1020, easing: 'cubic-bezier(.16,.7,.3,1)', fill: 'both' },
+  )
+  scene.querySelector('.scene-halo').animate(
+    [{ opacity: 0, transform: 'translateY(200px)' }, { opacity: 1, transform: 'none', offset: .6 }, { opacity: 0, transform: 'none' }],
+    { delay: 320, duration: 1250, easing: 'ease-out', fill: 'both' },
+  )
 }
 
-onMounted(async () => {
-  draw(roof.value, 60, 420)
-  draw(arc.value, 180, 420)
-  sun.value.animate(
-    [{ transform: 'translateY(16px) scale(.3)', opacity: 0 }, { transform: 'none', opacity: 1 }],
-    { duration: 480, delay: 240, easing: 'cubic-bezier(.22,.8,.24,1)', fill: 'both' },
-  )
-  await word.value.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 360, delay: 380, easing: 'ease-out', fill: 'both' }).finished
-  await new Promise((resolve) => { setTimeout(resolve, 160) })
-  if (finished) return
-
-  // 飞向页面上的 logo。页面还没渲染出来时就地淡出
-  const target = document.querySelector('[data-brand-mark]')
-  const easing = 'cubic-bezier(.6,0,.2,1)'
+function flyToPageLogo() {
+  // 标志飞到页面上 logo 的位置并缩放到同样大小，揭开后正好重合
+  const target = document.querySelector('.brand [data-brand-mark]')
   const duration = 480
   if (target) {
-    const from = mark.value.getBoundingClientRect()
+    const from = lockup.value.querySelector('[data-brand-mark]').getBoundingClientRect()
     const to = target.getBoundingClientRect()
-    const dx = to.left + to.width / 2 - (from.left + from.width / 2)
-    const dy = to.top + to.height / 2 - (from.top + from.height / 2)
-    mark.value.animate([{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(${to.width / from.width})` }], { duration, easing, fill: 'forwards' })
+    lockup.value.animate(
+      [{ transform: 'none' }, { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width})` }],
+      { duration, easing: 'cubic-bezier(.6,0,.2,1)', fill: 'forwards' },
+    )
+  } else {
+    lockup.value.animate([{ opacity: 1 }, { opacity: 0 }], { duration, fill: 'forwards' })
   }
-  word.value.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, fill: 'forwards' })
-  root.value.animate(
-    [{ backgroundColor: '#e6eef8' }, { backgroundColor: 'rgba(230,238,248,0)' }],
-    { duration, easing: 'ease-in', fill: 'forwards' },
-  )
-  root.value.style.pointerEvents = 'none'
-  await new Promise((resolve) => { setTimeout(resolve, duration) })
-  finish()
+  later(() => {
+    backdrop.value.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 380, easing: 'ease-out', fill: 'forwards' })
+  }, 80)
+  later(finish, Math.max(duration, 460))
+}
+
+onMounted(() => {
+  // 动画期间先隐藏页面上的 logo，飞行的标志落位后再替换，全程只看到一个
+  document.documentElement.dataset.intro = 'on'
+  playScene()
+  lockup.value.animate([{ opacity: 0 }, { opacity: 1 }], { delay: 800, duration: 260, easing: 'ease-out', fill: 'both' })
+  later(flyToPageLogo, 1320)
 })
 </script>
 
 <template>
-  <div ref="root" class="intro" aria-hidden="true" @click="finish">
-    <svg ref="mark" viewBox="0 0 64 64" :width="SIZE" :height="SIZE">
-      <circle cx="32" cy="32" r="31" fill="#25518F" />
-      <path ref="roof" d="M13 30 32 14l19 16" fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round" />
-      <circle ref="sun" cx="32" cy="33" r="7" fill="#F2A93B" style="transform-box: fill-box; transform-origin: center" />
-      <path ref="arc" d="M15 41c4 7.500 10 11 17 11s13-3.500 17-11" fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round" />
-    </svg>
-    <svg ref="word" :viewBox="`0 0 ${WORDMARK_WIDTH} 42`" :width="(30 * WORDMARK_WIDTH) / 42" height="30">
-      <path v-for="(d, i) in WORDMARK_PATHS" :key="i" :d="d" fill="#163A6B" />
-    </svg>
+  <div class="intro" aria-hidden="true" @click="finish">
+    <div ref="backdrop" class="intro-backdrop">
+      <div ref="night" class="intro-night"></div>
+      <CommunityScene />
+    </div>
+    <div ref="lockup" class="intro-lockup"><Logo :size="MARK_SIZE" /></div>
   </div>
 </template>
