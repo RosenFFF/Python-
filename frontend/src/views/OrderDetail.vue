@@ -95,7 +95,7 @@ onMounted(load)
     <div class="card" v-if="!['CANCELLED', 'NO_SHOW'].includes(order.status)">
       <div class="row" style="gap: 4px">
         <template v-for="(s, i) in steps" :key="s.code">
-          <span class="tag" :class="s.current ? 'pine' : s.done ? 'green' : ''">{{ s.text }}</span>
+          <span class="tag" :class="s.current ? 'brand' : s.done ? 'green' : ''">{{ s.text }}</span>
           <span v-if="i < steps.length - 1" class="muted">›</span>
         </template>
       </div>
@@ -109,11 +109,11 @@ onMounted(load)
       <section class="card">
         <h2 class="mb">工单信息</h2>
         <dl class="kv">
-          <dt>老人</dt><dd>{{ order.elder_name }} · {{ order.disability_label }} <span v-for="t in order.care_tags" :key="t" class="tag">{{ t }}</span></dd>
+          <dt>老人</dt><dd>{{ order.elder_name }}　{{ order.disability_label }} <span v-for="t in order.care_tags" :key="t" class="tag">{{ t }}</span></dd>
           <dt>预约时间</dt><dd class="num">{{ dt(order.scheduled_start, true) }}</dd>
           <dt>服务地址</dt><dd>{{ order.address }}</dd>
           <dt>护理员</dt><dd>{{ order.caregiver_name || '尚未派单' }}</dd>
-          <dt>单价</dt><dd class="num">{{ money(order.unit_price) }} · 价格版本 v{{ order.price_version }}</dd>
+          <dt>单价</dt><dd class="num">{{ money(order.unit_price) }}　价格版本 v{{ order.price_version }}</dd>
           <dt>缴费</dt><dd><span class="tag" :class="statusColor(order.payment_status)">{{ order.payment_label }}</span></dd>
           <dt v-if="order.remark">备注</dt><dd v-if="order.remark">{{ order.remark }}</dd>
           <dt v-if="order.cancel_reason">取消原因</dt><dd v-if="order.cancel_reason">{{ order.cancel_reason }}<span v-if="order.cancel_chargeable" class="tag red"> 计费</span></dd>
@@ -132,7 +132,7 @@ onMounted(load)
             <dt v-if="order.execution.checkin_note">定位说明</dt><dd v-if="order.execution.checkin_note">{{ order.execution.checkin_note }}</dd>
             <dt>签退</dt><dd class="num">{{ dt(order.execution.checkout_at) }}</dd>
             <dt>服务时长</dt><dd class="num">{{ order.execution.duration_minutes ?? '—' }} 分钟（标准 {{ order.standard_minutes }} 分钟）
-              <span v-if="order.execution.duration_abnormal" class="tag red">时长异常 · {{ order.execution.spot_check_label }}</span>
+              <span v-if="order.execution.duration_abnormal" class="tag red">时长异常　{{ order.execution.spot_check_label }}</span>
             </dd>
             <dt>服务小结</dt><dd class="pre">{{ order.execution.summary || '—' }}</dd>
           </dl>

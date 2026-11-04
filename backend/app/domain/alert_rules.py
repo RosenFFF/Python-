@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 OPERATORS = {">=": operator.ge, "<=": operator.le, ">": operator.gt, "<": operator.lt}
+OP_TEXT = {">=": "达到或超过", "<=": "低于或等于", ">": "超过", "<": "低于"}
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,7 @@ def _not_triggered() -> Verdict:
 
 def evaluate_threshold(spec: RuleSpec, latest: float) -> Verdict:
     if OPERATORS[spec.op](latest, spec.threshold):
-        return Verdict(True, latest, f"当前值 {latest:g} {spec.op} 阈值 {spec.threshold:g}")
+        return Verdict(True, latest, f"当前 {latest:g}，{OP_TEXT[spec.op]}阈值 {spec.threshold:g}")
     return _not_triggered()
 
 
@@ -45,7 +46,7 @@ def evaluate_consecutive(spec: RuleSpec, recent_desc: list[float]) -> Verdict:
     compare = OPERATORS[spec.op]
     if all(compare(v, spec.threshold) for v in window):
         joined = "、".join(f"{v:g}" for v in reversed(window))
-        return Verdict(True, window[0], f"连续 {n} 次 {spec.op} {spec.threshold:g}（{joined}）")
+        return Verdict(True, window[0], f"连续 {n} 次{OP_TEXT[spec.op]} {spec.threshold:g}（{joined}）")
     return _not_triggered()
 
 

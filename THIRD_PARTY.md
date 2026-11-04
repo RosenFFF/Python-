@@ -33,5 +33,6 @@
 
 ## 说明
 
+- 标志字样和登录页标题使用思源宋体（Noto Serif SC，SIL OFL 1.1）的子集，来源 <https://fonts.google.com/noto/specimen/Noto+Serif+SC>。
 - 演示数据中的人名、证件号、手机号均由脚本随机生成，不对应真实人员。
 - 背景数据引自赛题给出的《2025 年国民经济和社会发展统计公报》。

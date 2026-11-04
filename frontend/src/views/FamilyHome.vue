@@ -46,7 +46,7 @@ onMounted(load)
       <b>健康提醒：</b>{{ alerts[0].title }}，社区正在处理。{{ alerts[0].status_label }}。
     </div>
 
-    <button class="sos pulse" @click="confirmSos = true">一键呼救</button>
+    <button class="sos" @click="confirmSos = true">一键呼救</button>
 
     <div class="elder-tiles">
       <router-link class="tile" to="/family/book">预约服务<small>助餐、助浴、陪同就医……</small></router-link>

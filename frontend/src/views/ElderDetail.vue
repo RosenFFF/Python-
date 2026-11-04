@@ -93,7 +93,7 @@ onMounted(async () => {
   <div v-if="elder" class="col">
     <div class="page-head">
       <h1>{{ elder.name }}</h1>
-      <span class="sub">{{ elder.gender }} · {{ elder.age }} 岁 · {{ elder.code }} · {{ elder.community_name }} {{ elder.grid_name }}</span>
+      <span class="sub">{{ elder.gender }}　{{ elder.age }} 岁　{{ elder.code }}　{{ elder.community_name }} {{ elder.grid_name }}</span>
       <span class="tag" :class="{ red: elder.disability_level === 'SEVERE', yellow: elder.disability_level === 'MODERATE' }">{{ elder.disability_label }}</span>
       <span v-for="t in elder.care_tags" :key="t" class="tag">{{ t }}</span>
       <span class="grow"></span>
@@ -157,7 +157,7 @@ onMounted(async () => {
         <div v-if="!logs.length" class="empty">没有变更记录</div>
         <ul class="timeline">
           <li v-for="l in logs" :key="l.id">
-            <div class="when num">{{ dt(l.changed_at) }} · {{ l.changed_by }}</div>
+            <div class="when num">{{ dt(l.changed_at) }}　{{ l.changed_by }}</div>
             <div><b>{{ FIELD_NAMES[l.field] || l.field }}</b> <span class="small"><template v-if="l.before">{{ l.before }} → </template>{{ l.after }}</span></div>
           </li>
         </ul>
@@ -167,7 +167,7 @@ onMounted(async () => {
         <div v-if="!accessLogs.length" class="empty">没有查看记录</div>
         <ul class="timeline">
           <li v-for="l in accessLogs" :key="l.id">
-            <div class="when num">{{ dt(l.accessed_at) }} · {{ l.user_name }} · {{ l.ip }}</div>
+            <div class="when num">{{ dt(l.accessed_at) }}　{{ l.user_name }}　{{ l.ip }}</div>
             <div class="small">{{ l.fields.map((f) => FIELD_NAMES[f]).join('、') }}。理由：{{ l.reason }}</div>
           </li>
         </ul>

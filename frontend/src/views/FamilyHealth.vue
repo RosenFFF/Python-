@@ -28,7 +28,7 @@ onMounted(async () => {
       <div v-for="a in alerts" :key="a.id" class="alert-card mb" :class="a.level">
         <div class="row between"><b>{{ a.level_label }}预警：{{ a.title }}</b><span class="tag">{{ a.status_label }}</span></div>
         <div class="small">{{ a.message }}</div>
-        <div class="small muted">{{ dt(a.triggered_at) }}<template v-if="a.conclusion_label && a.conclusion"> · 结论：{{ a.conclusion_label }}</template></div>
+        <div class="small muted">{{ dt(a.triggered_at) }}<template v-if="a.conclusion_label && a.conclusion">　结论：{{ a.conclusion_label }}</template></div>
       </div>
     </section>
   </div>

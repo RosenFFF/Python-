@@ -30,7 +30,7 @@ async function caption(text) {
     if (!el) {
       el = document.createElement('div')
       el.id = 'demo-caption'
-      el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:1120px;width:calc(100% - 80px);background:rgba(15,30,28,.86);color:#fff;font:500 19px/1.5 "Microsoft YaHei",sans-serif;padding:9px 18px;border-radius:8px;z-index:99999;text-align:center;pointer-events:none'
+      el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:1120px;width:calc(100% - 80px);background:rgba(16,32,58,.88);color:#fff;font:500 19px/1.5 "Microsoft YaHei",sans-serif;padding:9px 18px;border-radius:8px;z-index:99999;text-align:center;pointer-events:none'
       document.body.appendChild(el)
     }
     el.textContent = value
@@ -148,16 +148,19 @@ async function main() {
     await cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {})
   })
 
-  await page.setContent(`<!doctype html><html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#143f3a;color:#fff;font-family:'Microsoft YaHei'">
+  await page.setContent(`<!doctype html><html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#163a6b;color:#fff;font-family:'Microsoft YaHei'">
     <div style="font-size:64px;font-weight:700;letter-spacing:.1em">颐护通</div>
-    <div style="font-size:26px;margin-top:14px;color:#cfe0da">社区智慧养老服务与健康监测平台</div>
-    <div style="font-size:18px;margin-top:30px;color:#9fbab3">2026 年第四届大学生信息系统创新大赛 · Python 编程巅峰赛</div></body></html>`)
+    <div style="font-size:26px;margin-top:14px;color:#d5dfec">社区智慧养老服务与健康监测平台</div>
+    <div style="font-size:18px;margin-top:30px;color:#a9bad2">2026 年第四届大学生信息系统创新大赛 · Python 编程巅峰赛</div></body></html>`)
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 78, maxWidth: 1280, maxHeight: 720, everyNthFrame: 1 })
   startedAt = Date.now()
   // 让静止画面也持续出帧：画面不变时 screencast 不发帧，靠 ffconcat 的时长补齐
   await scene('intro')
 
   await scene('family_home', async () => {
+    await page.goto(`${BASE}/login`)
+    await sleep(3200)
+    await shot('login')
     await login('family_wang')
     await sleep(600)
     await shot('family-home')
@@ -556,10 +559,10 @@ async function main() {
 
   await scene('outro', async () => {
     clearInterval(captionTimer)
-    await page.setContent(`<!doctype html><html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#143f3a;color:#fff;font-family:'Microsoft YaHei'">
+    await page.setContent(`<!doctype html><html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#163a6b;color:#fff;font-family:'Microsoft YaHei'">
       <div style="font-size:54px;font-weight:700;letter-spacing:.1em">颐护通</div>
-      <div style="font-size:22px;margin-top:18px;color:#cfe0da">预约 · 派单 · 执行 · 预警 · 评价 · 结算，六条流程闭环</div>
-      <div style="font-size:18px;margin-top:12px;color:#9fbab3">Docker 部署 · AI 辅助 · 适老化 · 离线同步</div></body></html>`)
+      <div style="font-size:22px;margin-top:18px;color:#d5dfec">预约 · 派单 · 执行 · 预警 · 评价 · 结算，六条流程闭环</div>
+      <div style="font-size:18px;margin-top:12px;color:#a9bad2">Docker 部署 · AI 辅助 · 适老化 · 离线同步</div></body></html>`)
     playCaptions(config.scenes.find((s) => s.id === 'outro').text, durations.outro)
   })
   clearInterval(captionTimer)

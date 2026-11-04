@@ -16,7 +16,7 @@ const caregivers = ref([])
 const showExcluded = ref(false)
 const reassign = reactive({ show: false, caregiver_id: null, reason: '' })
 
-const FACTOR_COLOR = { skill: '#1f5e57', distance: '#3f9b8f', load: '#c79a3b', rating: '#8c6bb1' }
+const FACTOR_COLOR = { skill: '#2F6FC2', distance: '#D97A1C', load: '#1E9C8F', rating: '#B25BC4' }
 const activeOffer = computed(() => history.value.offers.find((o) => o.status === 'OFFERED'))
 
 async function load() {
@@ -79,9 +79,9 @@ onMounted(load)
 <template>
   <div v-if="order" class="col">
     <div class="page-head">
-      <h1>{{ order.elder_name }} · {{ order.item_name }}</h1>
+      <h1>{{ order.elder_name }}　{{ order.item_name }}</h1>
       <span class="tag" :class="statusColor(order.status)">{{ order.status_label }}</span>
-      <span class="sub num">{{ dt(order.scheduled_start) }} · 优先级 P{{ order.priority }}</span>
+      <span class="sub num">{{ dt(order.scheduled_start) }}　优先级 P{{ order.priority }}</span>
       <span class="grow"></span>
       <button v-if="['PENDING_DISPATCH', 'DISPATCHED'].includes(order.status)" class="btn" @click="openReassign">手工改派</button>
       <button class="btn ghost" @click="router.push(`/orders/${id}`)">工单详情</button>
@@ -98,12 +98,12 @@ onMounted(load)
       <div class="row between">
         <h2>推荐候选（前 {{ rec.candidates.length }} 名）</h2>
         <span class="small muted">
-          权重：技能 {{ rec.weights.skill }} · 距离 {{ rec.weights.distance }} · 负荷 {{ rec.weights.load }} · 评分 {{ rec.weights.rating }}
+          权重：技能 {{ rec.weights.skill }}　距离 {{ rec.weights.distance }}　负荷 {{ rec.weights.load }}　评分 {{ rec.weights.rating }}
           <template v-if="rec.backup_count">，另有 {{ rec.backup_count }} 名备选用于超时顺延</template>
         </span>
       </div>
-      <div class="grid" style="grid-template-columns: minmax(0, 1fr) 320px">
-        <div class="grid g3" style="align-items: start">
+      <div class="grid" style="grid-template-columns: minmax(0, 1fr) 300px; gap: 20px">
+        <div class="grid g3" style="align-items: start; gap: 14px">
           <div v-if="!rec.candidates.length" class="card empty" style="grid-column: 1 / -1">没有符合条件的护理员，请查看过滤原因或手工改派。</div>
           <article v-for="c in rec.candidates" :key="c.caregiver_id" class="candidate" :class="{ first: c.rank === 1 }">
             <div class="row between">
@@ -127,19 +127,19 @@ onMounted(load)
             <button class="btn" :class="{ primary: c.rank === 1 }" @click="assign(c.caregiver_id)">{{ c.rank === 1 ? '一键派单' : '派给 TA' }}</button>
           </article>
         </div>
-        <div class="card">
+        <div class="tint">
           <h3 class="mb">位置示意</h3>
           <svg v-if="map" :viewBox="`0 0 ${map.size} ${map.size}`" width="100%" role="img" aria-label="候选护理员与服务地址的相对位置">
-            <circle :cx="map.center" :cy="map.center" :r="map.radius" fill="#eef5f2" stroke="#2f8077" stroke-dasharray="5 4" />
-            <circle :cx="map.center" :cy="map.center" :r="map.radius / 3" fill="none" stroke="#cfe0da" />
-            <circle :cx="map.center" :cy="map.center" :r="(map.radius * 2) / 3" fill="none" stroke="#cfe0da" />
-            <line v-for="p in map.points" :key="`l${p.rank}`" :x1="map.center" :y1="map.center" :x2="p.x" :y2="p.y" stroke="#9fbab3" />
+            <circle :cx="map.center" :cy="map.center" :r="map.radius" fill="#eef3f9" stroke="#4a74ae" stroke-dasharray="5 4" />
+            <circle :cx="map.center" :cy="map.center" :r="map.radius / 3" fill="none" stroke="#d5dfec" />
+            <circle :cx="map.center" :cy="map.center" :r="(map.radius * 2) / 3" fill="none" stroke="#d5dfec" />
+            <line v-for="p in map.points" :key="`l${p.rank}`" :x1="map.center" :y1="map.center" :x2="p.x" :y2="p.y" stroke="#a9bad2" />
             <g v-for="p in map.points" :key="p.rank">
-              <circle :cx="p.x" :cy="p.y" r="11" fill="#1f5e57" />
+              <circle :cx="p.x" :cy="p.y" r="11" fill="#25518f" />
               <text :x="p.x" :y="p.y + 4" text-anchor="middle" fill="#fff" font-size="12" font-weight="600">{{ p.rank }}</text>
             </g>
             <rect :x="map.center - 6" :y="map.center - 6" width="12" height="12" rx="3" fill="#c0352b" stroke="#fff" stroke-width="1.5" />
-            <text :x="map.center" :y="map.center - map.radius - 4" text-anchor="middle" font-size="11" fill="#7c8885">{{ rec.order.max_distance_km }} 公里</text>
+            <text :x="map.center" :y="map.center - map.radius - 4" text-anchor="middle" font-size="11" fill="#6f7b89">{{ rec.order.max_distance_km }} 公里</text>
           </svg>
           <div class="small muted mt">红色方块为服务地址，数字为候选名次。</div>
         </div>

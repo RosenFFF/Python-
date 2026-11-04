@@ -72,7 +72,7 @@ onUnmounted(() => window.removeEventListener('yihu:refresh', refresh))
     </div>
 
     <div v-if="!data.items.length" class="card empty">当前没有符合条件的预警</div>
-    <article v-for="a in data.items" :key="a.id" class="alert-card" :class="[a.level, { pulse: a.level === 'RED' && a.status === 'OPEN' }]" style="cursor: pointer" @click="open(a)">
+    <article v-for="a in data.items" :key="a.id" class="alert-card" :class="a.level" style="cursor: pointer" @click="open(a)">
       <div class="row between">
         <div class="row">
           <span class="tag" :class="levelColor(a.level)">{{ a.level_label }}</span>
@@ -88,7 +88,7 @@ onUnmounted(() => window.removeEventListener('yihu:refresh', refresh))
         </div>
       </div>
       <div class="small" style="color: var(--ink-2); margin-top: 4px">{{ a.message }}</div>
-      <div class="small muted num">{{ dt(a.triggered_at) }} · {{ a.alert_no }}<template v-if="a.conclusion"> · {{ a.conclusion_label }} · {{ a.closed_by }} · 处置 {{ a.handle_minutes }} 分钟</template></div>
+      <div class="small muted num">{{ dt(a.triggered_at) }}　{{ a.alert_no }}<template v-if="a.conclusion">　{{ a.conclusion_label }}　{{ a.closed_by }}　处置 {{ a.handle_minutes }} 分钟</template></div>
     </article>
     <Pager v-model:page="filters.page" :size="filters.size" :total="data.total" />
 
@@ -115,7 +115,7 @@ onUnmounted(() => window.removeEventListener('yihu:refresh', refresh))
           <h3 class="mb">处置时间线</h3>
           <ul class="timeline">
             <li v-for="(e, i) in detail.events" :key="i">
-              <div class="when num">{{ dt(e.at) }} · {{ e.actor }}</div>
+              <div class="when num">{{ dt(e.at) }}　{{ e.actor }}</div>
               <div><b>{{ KIND[e.kind] || e.kind }}</b> <span class="small">{{ e.detail }}</span></div>
             </li>
           </ul>

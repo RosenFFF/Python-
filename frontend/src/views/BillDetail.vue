@@ -89,19 +89,19 @@ onMounted(load)
     <div class="card">
       <div class="row small" style="gap: 6px">
         <template v-for="([code, text], i) in FLOW" :key="code">
-          <span class="tag" :class="bill.status === code ? 'pine' : ''">{{ text }}</span>
+          <span class="tag" :class="bill.status === code ? 'brand' : ''">{{ text }}</span>
           <span v-if="i < FLOW.length - 1" class="muted">›</span>
         </template>
       </div>
     </div>
 
-    <div class="grid g6">
-      <div class="card kpi"><span class="label">账单总额</span><span class="value" style="font-size: 1.3rem">{{ money(bill.total_amount) }}</span></div>
-      <div class="card kpi"><span class="label">政府补贴</span><span class="value" style="font-size: 1.3rem">{{ money(bill.gov_amount) }}</span></div>
-      <div class="card kpi"><span class="label">长护险支付</span><span class="value" style="font-size: 1.3rem">{{ money(bill.ltci_amount) }}</span></div>
-      <div class="card kpi"><span class="label">个人自付</span><span class="value" style="font-size: 1.3rem">{{ money(bill.self_amount) }}</span></div>
-      <div class="card kpi"><span class="label">已拦截金额</span><span class="value" style="font-size: 1.3rem">{{ money(bill.intercepted_amount) }}</span></div>
-      <div class="card kpi"><span class="label">差异比例（阈值 1%）</span><span class="value" :class="{ 'level-RED': bill.needs_review }" style="font-size: 1.3rem">{{ pct(bill.discrepancy_ratio, 2) }}</span></div>
+    <div class="stats">
+      <div class="stat"><span class="label">账单总额</span><span class="value">{{ money(bill.total_amount) }}</span></div>
+      <div class="stat"><span class="label">政府补贴</span><span class="value">{{ money(bill.gov_amount) }}</span></div>
+      <div class="stat"><span class="label">长护险支付</span><span class="value">{{ money(bill.ltci_amount) }}</span></div>
+      <div class="stat"><span class="label">个人自付</span><span class="value">{{ money(bill.self_amount) }}</span></div>
+      <div class="stat"><span class="label">已拦截金额</span><span class="value">{{ money(bill.intercepted_amount) }}</span></div>
+      <div class="stat"><span class="label">差异比例（阈值 1%）</span><span class="value" :class="{ 'level-RED': bill.needs_review }">{{ pct(bill.discrepancy_ratio, 2) }}</span></div>
     </div>
 
     <div v-if="bill.needs_review && !bill.reviewed_at" class="notice error">差异金额占账单总额超过 1%，须处理全部差异并完成人工复核后才能提交。</div>
@@ -119,7 +119,7 @@ onMounted(load)
               <td class="num right">{{ money(d.amount) }}</td><td class="small" style="max-width: 320px">{{ d.detail }}</td>
               <td><span class="tag" :class="statusColor(d.status)">{{ d.status_label }}</span></td>
               <td class="small">
-                <template v-if="d.status === 'RESOLVED'">{{ d.resolution_label }} · {{ d.handled_by }}<div class="muted">{{ d.explanation }}</div></template>
+                <template v-if="d.status === 'RESOLVED'">{{ d.resolution_label }}　{{ d.handled_by }}<div class="muted">{{ d.explanation }}</div></template>
               </td>
               <td class="right"><button v-if="d.status === 'OPEN' && can('billing:discrepancy') && ['DRAFT', 'NEEDS_REVIEW'].includes(bill.status)" class="btn sm primary" @click="startResolve(d)">处理</button></td>
             </tr>

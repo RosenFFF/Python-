@@ -47,7 +47,7 @@ onMounted(async () => { matrix.value = await api.get('/admin/roles') })
         </thead>
         <tbody>
           <template v-for="(items, group) in groups" :key="group">
-            <tr><td :colspan="matrix.roles.length + 1" style="background: var(--pine-50); font-weight: 600">{{ group }}</td></tr>
+            <tr><td :colspan="matrix.roles.length + 1" style="background: var(--brand-50); font-weight: 600">{{ group }}</td></tr>
             <tr v-for="p in items" :key="p.code">
               <td>{{ p.name }} <span class="muted small">{{ p.code }}</span></td>
               <td v-for="r in matrix.roles" :key="r.code"><input type="checkbox" :checked="has(r, p.code)" :aria-label="`${r.name} ${p.name}`" @change="toggle(r, p.code)" /></td>

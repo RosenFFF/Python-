@@ -7,7 +7,7 @@ defineProps({ items: Array })
 <template>
   <ul class="timeline">
     <li v-for="(item, index) in items" :key="item.id ?? index">
-      <div class="when num">{{ dt(item.at) }} · {{ item.actor }}</div>
+      <div class="when num">{{ dt(item.at) }}　{{ item.actor }}</div>
       <div>
         <b v-if="item.to_label && item.to">{{ item.to_label }}</b>
         <span v-if="item.note" :class="{ muted: item.to_label && item.to }"> {{ item.note }}</span>

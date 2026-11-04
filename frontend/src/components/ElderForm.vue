@@ -39,7 +39,7 @@ function submit() {
     <label class="field"><span>性别</span><select v-model="form.gender"><option>男</option><option>女</option></select></label>
     <label class="field"><span>出生日期<i>*</i></span><input v-model="form.birth_date" type="date" /></label>
     <label class="field"><span>所属网格<i>*</i></span>
-      <select v-model.number="form.grid_id"><option :value="null">请选择</option><option v-for="g in grids" :key="g.id" :value="g.id">{{ g.community }} · {{ g.name }}</option></select>
+      <select v-model.number="form.grid_id"><option :value="null">请选择</option><option v-for="g in grids" :key="g.id" :value="g.id">{{ g.community }}　{{ g.name }}</option></select>
     </label>
     <label class="field"><span>身份证号<i v-if="!editing">*</i>{{ editing ? '（留空不修改）' : '' }}</span><input v-model="form.id_card" maxlength="18" /></label>
     <label class="field"><span>联系电话{{ editing ? '（留空不修改）' : '' }}</span><input v-model="form.phone" maxlength="11" /></label>

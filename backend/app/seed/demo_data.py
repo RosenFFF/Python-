@@ -454,8 +454,8 @@ def _build_health(db: Session, rng: random.Random, elders: list[Elder]) -> None:
 def _build_alert_history(db: Session, rng: random.Random, world: dict, elders: list[Elder]) -> None:
     now = clock.now()
     rules = {r.code: r for r in db.execute(select(AlertRule)).scalars()}
-    choices = [("BP-HIGH-RED", "收缩压：当前值 {v} >= 阈值 180 mmHg", (181, 196)), ("HR-CONSEC-YELLOW", "心率：连续 3 次 > 100 次/分", (102, 118)),
-               ("NO-DATA-BLUE", "已 {v} 小时未上报任何指标", (49, 70)), ("SPO2-LOW-YELLOW", "血氧：连续 3 次 < 94 %", (91, 93)), ("GLU-HIGH-RED", "血糖：当前值 {v} >= 阈值 16.7 mmol/L", (17, 21))]
+    choices = [("BP-HIGH-RED", "收缩压：当前 {v}，达到或超过阈值 180 mmHg", (181, 196)), ("HR-CONSEC-YELLOW", "心率：连续 3 次超过 100 次/分", (102, 118)),
+               ("NO-DATA-BLUE", "已 {v} 小时未上报任何指标", (49, 70)), ("SPO2-LOW-YELLOW", "血氧：连续 3 次低于 94 %", (91, 93)), ("GLU-HIGH-RED", "血糖：当前 {v}，达到或超过阈值 16.7 mmol/L", (17, 21))]
     measures = ["电话确认后上门测量，已复测正常", "联系家属陪同，用药后好转", "上门查看，老人状态平稳"]
     number = 0
     for days in range(440, 0, -1):
@@ -661,14 +661,14 @@ def _build_today(db: Session, rng: random.Random, world: dict, elders: list[Elde
                                                                    {"metric": "DIASTOLIC", "value": 104, "measured_at": now - timedelta(minutes=12)}], "随访测量")
     alert = db.execute(select(Alert).where(Alert.elder_id == red_elder.id, Alert.status != AlertStatus.CLOSED).order_by(Alert.id.desc())).scalar()
     if alert:
-        alert.triggered_at = alert.last_triggered_at = now - timedelta(minutes=12)
+        alert.triggered_at = alert.last_triggered_at = alert.pushed_at = now - timedelta(minutes=12)
     for offset in (40, 28, 15):
         health_service.ingest_points(db, grid_elders[1], [{"metric": "HEART_RATE", "value": 104 + offset % 7, "measured_at": now - timedelta(minutes=offset)}], HealthSource.WEARABLE, device_serial=None)
     other_grid_elder = next(e for e in elders if e.grid_id != grid_id)
     health_service.ingest_points(db, other_grid_elder, [{"metric": "SPO2", "value": 87, "measured_at": now - timedelta(minutes=50)}], HealthSource.FOLLOWUP)
     escalated = db.execute(select(Alert).where(Alert.elder_id == other_grid_elder.id, Alert.status != AlertStatus.CLOSED)).scalars().first()
     if escalated:
-        escalated.triggered_at = escalated.last_triggered_at = now - timedelta(minutes=50)
+        escalated.triggered_at = escalated.last_triggered_at = escalated.pushed_at = now - timedelta(minutes=50)
         escalated.escalated_at = now - timedelta(minutes=20)
         db.add(AlertEvent(alert_id=escalated.id, kind="ESCALATE", detail="已 30 分钟未处置，自动升级至街道监管员", at=now - timedelta(minutes=20)))
     health_service.scan_no_data(db, now)

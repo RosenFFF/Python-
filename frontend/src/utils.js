@@ -29,7 +29,7 @@ export const money = (cents) => (cents === null || cents === undefined ? '—' :
 export const label = (group, value) => state.meta?.labels?.[group]?.[value] ?? value ?? '—'
 
 const STATUS_COLOR = {
-  PENDING_ACCEPT: 'yellow', ACCEPTED: 'yellow', PENDING_DISPATCH: 'yellow', DISPATCHED: 'blue', IN_SERVICE: 'pine',
+  PENDING_ACCEPT: 'yellow', ACCEPTED: 'yellow', PENDING_DISPATCH: 'yellow', DISPATCHED: 'blue', IN_SERVICE: 'brand',
   COMPLETED: 'green', CANCELLED: '', NO_SHOW: 'red', OPEN: 'yellow', RESPONDED: 'blue', CLOSED: 'green',
   PROCESSING: 'blue', DRAFT: 'yellow', NEEDS_REVIEW: 'red', GRID_CONFIRMED: 'blue', ORG_CONFIRMED: 'blue', EFFECTIVE: 'green',
   RESOLVED: 'green', UNPAID: 'yellow', PAID: 'green', ASSIGNED: 'yellow', EXPLAINED: 'blue', CONCLUDED: 'green',

@@ -25,11 +25,11 @@ const option = computed(() => {
   return {
     grid: { left: 44, right: 24, top: 24, bottom: 30 },
     tooltip: { trigger: 'axis', formatter: (ps) => `${ps[0].axisValueLabel}<br/>${info?.label ?? ''}：<b>${ps[0].value[1]}</b> ${info?.unit ?? ''}` },
-    xAxis: { type: 'time', axisLabel: { color: '#7c8885' } },
-    yAxis: { type: 'value', scale: true, axisLabel: { color: '#7c8885' }, splitLine: { lineStyle: { color: '#efece3' } } },
+    xAxis: { type: 'time', axisLabel: { color: '#6f7b89' } },
+    yAxis: { type: 'value', scale: true, axisLabel: { color: '#6f7b89' }, splitLine: { lineStyle: { color: '#eef1f5' } } },
     series: [{
-      type: 'line', showSymbol: points.length < 40, symbolSize: 6, smooth: false, lineStyle: { color: '#1f5e57', width: 2 },
-      itemStyle: { color: '#1f5e57' }, data: points.map((p) => [p.t, p.v]),
+      type: 'line', showSymbol: points.length < 40, symbolSize: 6, smooth: false, lineStyle: { color: '#25518f', width: 2 },
+      itemStyle: { color: '#25518f' }, data: points.map((p) => [p.t, p.v]),
       markLine: { silent: true, symbol: 'none', lineStyle: { color: '#c0352b', type: 'dashed' }, data: lines },
     }],
   }
@@ -43,7 +43,7 @@ watch([days], load)
   <div v-if="data" class="col">
     <div v-if="summary" class="card">
       <div class="row between mb">
-        <h3>健康摘要 <span class="tag pine">系统生成</span></h3>
+        <h3>健康摘要 <span class="tag brand">系统生成</span></h3>
         <span v-if="summary.risk" class="small">巡访参考分 <b class="num">{{ summary.risk.score }}</b>（{{ summary.risk.tier }}）</span>
       </div>
       <p class="pre" style="margin: 0 0 8px">{{ summary.summary }}</p>
@@ -63,7 +63,7 @@ watch([days], load)
       </div>
       <div v-if="data.summary[selected]" class="row small muted mb">
         最新 <b class="num" style="color: var(--ink)">{{ data.summary[selected].latest }}</b> {{ data.summary[selected].unit }}
-        · 平均 {{ data.summary[selected].avg }} · 最低 {{ data.summary[selected].min }} · 最高 {{ data.summary[selected].max }} · 共 {{ data.summary[selected].count }} 次
+       　平均 {{ data.summary[selected].avg }}　最低 {{ data.summary[selected].min }}　最高 {{ data.summary[selected].max }}　共 {{ data.summary[selected].count }} 次
       </div>
       <div v-if="!Object.keys(data.summary).length" class="empty">暂无数据</div>
       <EChart v-else :option="option" height="260px" />

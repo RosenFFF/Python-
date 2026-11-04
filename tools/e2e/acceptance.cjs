@@ -20,7 +20,8 @@ async function newUser(username, viewport = { width: 1440, height: 900 }, servic
   const page = await context.newPage()
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) problems.push(`[console ${username}] ${m.text()}`) })
   page.on('pageerror', (e) => problems.push(`[pageerror ${username}] ${e.message}`))
-  page.on('response', (r) => { if (r.status() >= 500) problems.push(`[${r.status()} ${username}] ${r.url()}`) })
+  // 503 是恢复备份期间维护模式的预期响应，不算错误
+  page.on('response', (r) => { if (r.status() >= 500 && r.status() !== 503) problems.push(`[${r.status()} ${username}] ${r.url()}`) })
   await page.goto(`${BASE}/login`)
   await page.getByLabel('用户名').fill(username)
   await page.getByLabel('密码').fill(PASSWORD)

@@ -1,28 +1,37 @@
 <script setup>
-import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
 import Modal from '../components/Modal.vue'
-import { can, run, toast } from '../store'
-import { dt, levelColor, statusColor } from '../utils'
+import { can, run, state, toast } from '../store'
+import { dt, levelColor, serverNow } from '../utils'
 
 const router = useRouter()
-const data = reactive({ accept: [], dispatch: [], alerts: [], exceptions: [], spot: [], risk: [], followups: [] })
+const data = reactive({ accept: [], dispatch: [], alerts: [], exceptions: [], spot: [], risk: [], followups: [], loaded: false })
 const accepting = ref(null)
 const acceptNote = ref('')
+
+const greeting = computed(() => {
+  const hour = serverNow().getHours()
+  const word = hour < 6 ? '夜里好' : hour < 11 ? '早上好' : hour < 13 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
+  return `${state.user.display_name}，${word}`
+})
+const redAlerts = computed(() => data.alerts.filter((a) => a.level === 'RED'))
+const otherAlerts = computed(() => data.alerts.filter((a) => a.level !== 'RED'))
+const nothingToDo = computed(() => data.loaded && !data.accept.length && !data.dispatch.length && !redAlerts.value.length && !data.exceptions.length)
 
 async function load() {
   const [accept, dispatch, alerts, exceptions, spot, risk] = await Promise.all([
     api.get('/orders', { status: 'PENDING_ACCEPT', sort: 'priority', size: 10 }),
     api.get('/orders', { status: 'PENDING_DISPATCH', sort: 'priority', size: 10 }),
-    api.get('/alerts', { only_open: true, size: 8 }),
+    api.get('/alerts', { only_open: true, size: 12 }),
     api.get('/exceptions', { size: 30 }),
     api.get('/spot-checks'),
-    api.get('/ai/top-risk', { limit: 6 }),
+    api.get('/ai/top-risk', { limit: 5 }),
   ])
   Object.assign(data, {
     accept: accept.items, dispatch: dispatch.items, alerts: alerts.items,
-    exceptions: exceptions.items.filter((e) => e.status !== 'CLOSED'), spot: spot.items, risk,
+    exceptions: exceptions.items.filter((e) => e.status !== 'CLOSED'), spot: spot.items, risk, loaded: true,
   })
   if (can('followup:handle')) data.followups = await api.get('/followups', { status: 'OPEN' })
 }
@@ -35,7 +44,7 @@ function startAccept(order) {
 async function confirmAccept() {
   const order = accepting.value
   if (order.needs_manual && !acceptNote.value.trim()) {
-    toast('该预约未通过校验，人工受理必须填写依据', 'error')
+    toast('这张预约没有通过校验，请写明人工核实的情况', 'error')
     return
   }
   if (await run(() => api.post(`/orders/${order.id}/accept`, { note: acceptNote.value || null }), '已受理，进入待派单')) {
@@ -53,89 +62,105 @@ onUnmounted(() => window.removeEventListener('yihu:refresh', refresh))
 </script>
 
 <template>
-  <div class="col">
-    <div class="grid g4">
-      <div class="card kpi"><span class="label">待受理预约</span><span class="value">{{ data.accept.length }}</span></div>
-      <div class="card kpi"><span class="label">待派单工单</span><span class="value">{{ data.dispatch.length }}</span></div>
-      <div class="card kpi"><span class="label">未闭环预警</span><span class="value" :class="{ 'level-RED': data.alerts.some((a) => a.level === 'RED') }">{{ data.alerts.length }}</span></div>
-      <div class="card kpi"><span class="label">待处置异常 / 时长抽查</span><span class="value">{{ data.exceptions.length }} / {{ data.spot.length }}</span></div>
-    </div>
+  <div>
+    <header class="handover-head">
+      <h1>{{ greeting }}</h1>
+      <p v-if="nothingToDo">今天的工单都处理完了，可以看看右边的巡访参考。</p>
+      <p v-else-if="data.loaded">
+        还有 <a href="#accept">{{ data.accept.length }} 张预约</a>等你受理，<a href="#dispatch">{{ data.dispatch.length }} 张工单</a>等你派单<template v-if="data.alerts.length">，<router-link to="/alerts">{{ data.alerts.length }} 条预警</router-link>没有闭环</template><template v-if="data.exceptions.length">，<router-link to="/exceptions">{{ data.exceptions.length }} 个服务异常</router-link>待处置</template>。
+      </p>
+    </header>
 
-    <div class="grid g2">
-      <section class="card">
-        <div class="card-head"><h2 class="grow">待受理预约</h2><router-link class="small" to="/orders?status=PENDING_ACCEPT">全部</router-link></div>
-        <div v-if="!data.accept.length" class="empty">没有待受理的预约</div>
-        <div v-for="o in data.accept" :key="o.id" class="row between" style="padding: 8px 0; border-bottom: 1px solid var(--line-2)">
-          <div class="grow">
-            <router-link :to="`/orders/${o.id}`"><b>{{ o.elder_name }}</b></router-link> {{ o.item_name }} <span class="muted num">{{ dt(o.scheduled_start) }}</span>
-            <div class="tags"><span class="tag">{{ o.disability_label }}</span><span v-for="t in o.care_tags" :key="t" class="tag">{{ t }}</span><span v-if="o.needs_manual" class="tag red">需人工受理</span></div>
-            <div v-for="i in o.validation_issues" :key="i.code" class="small" style="color: var(--red)">{{ i.message }}</div>
+    <section v-if="redAlerts.length" class="urgent" aria-label="红色预警">
+      <div v-for="a in redAlerts" :key="a.id" class="urgent-row">
+        <span class="tag red">红色预警</span>
+        <span class="grow"><b>{{ a.elder_name }}</b>，{{ a.message }}</span>
+        <span class="small num" :class="{ 'level-RED': a.open_minutes >= 20 }">
+          <template v-if="a.open_minutes !== null">已等待 {{ a.open_minutes }} 分钟</template>
+          <template v-else>{{ a.status_label }}</template>
+          <template v-if="a.escalated_at">，已升级到街道</template>
+        </span>
+        <router-link class="btn sm danger" to="/alerts">去处置</router-link>
+      </div>
+    </section>
+
+    <div class="handover">
+      <div>
+        <section id="accept">
+          <h2 class="mb">待受理预约</h2>
+          <div v-if="!data.accept.length" class="muted">没有待受理的预约。</div>
+          <div v-for="o in data.accept" :key="o.id" class="task row between">
+            <div class="grow task-title">
+              <router-link :to="`/orders/${o.id}`"><b>{{ o.elder_name }}</b></router-link> {{ o.item_name }}
+              <span class="muted num">{{ dt(o.scheduled_start) }}</span>
+              <div class="small muted">{{ o.disability_label }}<template v-for="t in o.care_tags" :key="t">，{{ t }}</template></div>
+              <div v-for="i in o.validation_issues" :key="i.code" class="small" style="color: var(--red)">{{ i.message }}</div>
+            </div>
+            <button class="btn sm primary" @click="startAccept(o)">{{ o.needs_manual ? '人工受理' : '受理' }}</button>
           </div>
-          <button class="btn sm primary" @click="startAccept(o)">受理</button>
-        </div>
-      </section>
+        </section>
 
-      <section class="card">
-        <div class="card-head"><h2 class="grow">待派单（按优先级）</h2><router-link class="small" to="/orders?status=PENDING_DISPATCH">全部</router-link></div>
-        <div v-if="!data.dispatch.length" class="empty">没有待派单的工单</div>
-        <div v-for="o in data.dispatch" :key="o.id" class="row between" style="padding: 8px 0; border-bottom: 1px solid var(--line-2)">
-          <div class="grow">
-            <span class="tag pine num" title="优先级：失能等级、独居等综合">P{{ o.priority }}</span>
-            <b> {{ o.elder_name }}</b> {{ o.item_name }} <span class="muted num">{{ dt(o.scheduled_start) }}</span>
-            <span v-if="o.manual_coordination" class="tag red">需人工协调</span>
+        <section id="dispatch">
+          <h2 class="mb">待派单</h2>
+          <div v-if="!data.dispatch.length" class="muted">没有待派单的工单。</div>
+          <div v-for="o in data.dispatch" :key="o.id" class="task row between">
+            <div class="grow task-title">
+              <b>{{ o.elder_name }}</b> {{ o.item_name }}
+              <span class="muted num">{{ dt(o.scheduled_start) }}</span>
+              <span v-if="o.manual_coordination" class="tag red" style="margin-left: 8px">候选已用尽</span>
+              <div class="small muted">优先级 {{ o.priority }}，{{ o.disability_label }}<template v-for="t in o.care_tags" :key="t">，{{ t }}</template></div>
+            </div>
+            <button class="btn sm primary" @click="router.push(`/dispatch/${o.id}`)">派单</button>
           </div>
-          <button class="btn sm primary" @click="router.push(`/dispatch/${o.id}`)">派单</button>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <section class="card">
-        <div class="card-head"><h2 class="grow">预警（红色置顶）</h2><router-link class="small" to="/alerts">预警看板</router-link></div>
-        <div v-if="!data.alerts.length" class="empty">没有未闭环预警</div>
-        <div v-for="a in data.alerts" :key="a.id" class="alert-card mb" :class="a.level">
-          <div class="row between">
-            <b><span class="tag" :class="levelColor(a.level)">{{ a.level_label }}</span> {{ a.elder_name }}：{{ a.title }}</b>
-            <span v-if="a.open_minutes !== null" class="small num" :class="{ 'level-RED': a.level === 'RED' && a.open_minutes >= 20 }">已 {{ a.open_minutes }} 分钟</span>
+      <aside>
+        <div v-if="otherAlerts.length" class="aside-block">
+          <div class="card-head"><h3 class="grow">其他预警</h3><router-link class="small" to="/alerts">看全部</router-link></div>
+          <div v-for="a in otherAlerts.slice(0, 4)" :key="a.id" class="mb">
+            <span class="tag" :class="levelColor(a.level)">{{ a.level_label }}</span>
+            <b> {{ a.elder_name }}</b>
+            <div class="small muted">{{ a.title }}，已等待 {{ a.open_minutes ?? 0 }} 分钟</div>
           </div>
-          <div class="small muted">{{ a.message }}</div>
-          <div v-if="a.escalated_at" class="small level-RED">已升级</div>
         </div>
-      </section>
 
-      <section class="card">
-        <div class="card-head"><h2 class="grow">优先巡访参考</h2><span class="tag pine">系统生成</span></div>
-        <div v-for="p in data.risk" :key="p.elder_id" class="row between" style="padding: 6px 0; border-bottom: 1px solid var(--line-2)">
-          <router-link class="grow" :to="`/elders/${p.elder_id}`">{{ p.elder_name }}</router-link>
-          <span class="small muted" style="max-width: 60%">{{ p.factors.slice(0, 3).map((f) => f.name + (f.detail ? '：' + f.detail : '')).join('；') }}</span>
-          <b class="num" :class="{ 'level-RED': p.tier === '高' }" style="width: 34px; text-align: right">{{ p.score }}</b>
+        <div v-if="data.exceptions.length" class="aside-block">
+          <div class="card-head"><h3 class="grow">服务异常</h3><router-link class="small" to="/exceptions">去处置</router-link></div>
+          <div v-for="e in data.exceptions.slice(0, 3)" :key="e.id" class="mb">
+            <b>{{ e.elder_name }}</b>，{{ e.type_label }}
+            <div class="small muted">{{ e.description }}，已等待 {{ e.open_minutes }} 分钟</div>
+          </div>
         </div>
-        <div class="small muted mt">依据能力等级、标签、年龄、慢病和预警记录加权，不是医学诊断。</div>
-      </section>
 
-      <section class="card">
-        <div class="card-head"><h2 class="grow">服务异常</h2><router-link class="small" to="/exceptions">处置队列</router-link></div>
-        <div v-if="!data.exceptions.length" class="empty">没有待处置异常</div>
-        <div v-for="e in data.exceptions" :key="e.id" class="row between" style="padding: 6px 0">
-          <span class="grow"><span class="tag" :class="statusColor(e.status)">{{ e.type_label }}</span> {{ e.elder_name }} · {{ e.description }}</span>
-          <span class="small muted num">{{ e.open_minutes }} 分钟</span>
+        <div v-if="data.spot.length" class="aside-block">
+          <h3 class="mb">时长待抽查</h3>
+          <div v-for="s in data.spot" :key="s.order_id" class="mb">
+            <router-link :to="`/orders/${s.order_id}`">{{ s.elder_name }} {{ s.item_name }}</router-link>
+            <div class="small muted num">实际 {{ s.duration_minutes }} 分钟，标准 {{ s.standard_minutes }} 分钟</div>
+          </div>
         </div>
-      </section>
 
-      <section class="card">
-        <div class="card-head"><h2 class="grow">时长异常待抽查</h2></div>
-        <div v-if="!data.spot.length" class="empty">没有待抽查工单</div>
-        <div v-for="s in data.spot" :key="s.order_id" class="row between" style="padding: 6px 0">
-          <router-link class="grow" :to="`/orders/${s.order_id}`">{{ s.order_no }} {{ s.item_name }}</router-link>
-          <span class="small num">实际 {{ s.duration_minutes }} / 标准 {{ s.standard_minutes }} 分钟</span>
+        <div class="aside-block">
+          <h3 class="mb">建议优先巡访</h3>
+          <div v-for="p in data.risk" :key="p.elder_id" class="mb">
+            <div class="row between">
+              <router-link :to="`/elders/${p.elder_id}`">{{ p.elder_name }}</router-link>
+              <b class="num" :class="{ 'level-RED': p.tier === '高' }">{{ p.score }}</b>
+            </div>
+            <div class="small muted">{{ p.factors.slice(0, 2).map((f) => f.detail || f.name).join('，') }}</div>
+          </div>
+          <div class="small muted">按能力等级、照护标签、年龄、慢性病和预警记录排序，不是医学诊断。</div>
         </div>
-      </section>
+      </aside>
     </div>
 
     <Modal v-if="accepting" title="受理预约" @close="accepting = null">
-      <p><b>{{ accepting.elder_name }}</b>，{{ accepting.item_name }}，{{ dt(accepting.scheduled_start) }}</p>
+      <p style="margin-top: 0"><b>{{ accepting.elder_name }}</b>，{{ accepting.item_name }}，{{ dt(accepting.scheduled_start) }}</p>
       <div v-if="accepting.needs_manual" class="notice warn mb">
         <div v-for="i in accepting.validation_issues" :key="i.code">{{ i.message }}</div>
       </div>
-      <label class="field"><span>受理依据<i v-if="accepting.needs_manual">*</i></span><textarea v-model="acceptNote" placeholder="校验未通过时，请写明人工核实情况"></textarea></label>
+      <label class="field"><span>受理依据<i v-if="accepting.needs_manual">*</i></span><textarea v-model="acceptNote" :placeholder="accepting.needs_manual ? '写明人工核实的情况' : '选填'"></textarea></label>
       <template #foot><button class="btn" @click="accepting = null">取消</button><button class="btn primary" @click="confirmAccept">确认受理</button></template>
     </Modal>
   </div>

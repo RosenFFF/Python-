@@ -39,7 +39,7 @@ def to_xlsx(headers: list[str], rows: Iterable[list], sheet: str = "数据") -> 
     ws.append(headers)
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill("solid", fgColor="0F5F5C")
+        cell.fill = PatternFill("solid", fgColor="25518F")
     for row in rows:
         ws.append([safe_cell(cell) for cell in row])
     ws.freeze_panes = "A2"

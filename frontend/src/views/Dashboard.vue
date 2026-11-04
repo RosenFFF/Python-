@@ -10,7 +10,8 @@ const route = useRoute()
 const kind = computed(() => route.params.kind)
 const range = reactive({ preset: '30d', start: daysAgo(29), end: today(), granularity: '' })
 const data = ref(null)
-const PALETTE = ['#1f5e57', '#c79a3b', '#3f9b8f', '#8c6bb1', '#c0652b', '#5b86b5', '#9aa83c', '#b05a7a']
+// 分类色固定顺序，已通过色盲可分性校验；超过 6 类时小项并入“其他”
+const PALETTE = ['#2F6FC2', '#D97A1C', '#1E9C8F', '#B25BC4', '#6E9A2F', '#DB5C86']
 const TITLES = { community: '社区看板', org: '机构看板', street: '街道看板' }
 
 function setPreset(preset) {
@@ -29,26 +30,32 @@ async function load() {
   data.value = await api.get(`/stats/dashboard/${kind.value}`, { start: range.start, end: range.end, granularity: range.granularity })
 }
 
-const axis = { axisLabel: { color: '#7c8885' }, axisLine: { lineStyle: { color: '#e2dfd4' } }, splitLine: { lineStyle: { color: '#efece3' } } }
+const axis = { axisLabel: { color: '#6f7b89' }, axisLine: { lineStyle: { color: '#e3e8ef' } }, splitLine: { lineStyle: { color: '#eef1f5' } } }
 
 const trendOption = computed(() => {
   const chart = data.value?.charts.trend
   if (!chart) return null
   return {
-    color: PALETTE, tooltip: { trigger: 'axis' }, legend: { top: 0, textStyle: { color: '#4c5a57' } },
+    color: PALETTE, tooltip: { trigger: 'axis' }, legend: chart.series.length > 1 ? { top: 0, textStyle: { color: '#4b5765' } } : { show: false },
     grid: { left: 50, right: 16, top: 32, bottom: 28 },
-    xAxis: { type: 'category', data: chart.x, ...axis, axisLabel: { color: '#7c8885', hideOverlap: true } },
-    yAxis: { type: 'value', ...axis },
-    series: chart.series.map((s) => ({ name: s.name, type: 'line', data: s.data, showSymbol: chart.x.length < 20, smooth: false, lineStyle: { width: 2 } })),
+    xAxis: { type: 'category', data: chart.x, ...axis, axisLabel: { color: '#6f7b89', hideOverlap: true } },
+    yAxis: { type: 'value', minInterval: 1, ...axis },
+    series: chart.series.map((s) => ({ name: s.name, type: 'line', data: s.data, showSymbol: chart.x.length < 20, symbolSize: 8, smooth: false, lineStyle: { width: 2 } })),
   }
 })
 const shareOption = computed(() => {
   const chart = data.value?.charts.share
   if (!chart) return null
+  const rows = chart.data.length > 6
+    ? [...chart.data.slice(0, 5), { name: '其他', value: Number(chart.data.slice(5).reduce((sum, d) => sum + d.value, 0).toFixed(2)) }]
+    : chart.data
   return {
     color: PALETTE, tooltip: { trigger: 'item', formatter: '{b}<br/>{c}（{d}%）' },
-    legend: { type: 'scroll', orient: 'vertical', right: 0, top: 'middle', textStyle: { color: '#4c5a57' } },
-    series: [{ type: 'pie', radius: ['45%', '72%'], center: ['36%', '50%'], label: { show: false }, data: chart.data.map((d) => ({ name: d.name, value: d.value })) }],
+    legend: { type: 'scroll', orient: 'vertical', right: 0, top: 'middle', textStyle: { color: '#4b5765' } },
+    series: [{
+      type: 'pie', radius: ['48%', '74%'], center: ['34%', '50%'], label: { show: false },
+      itemStyle: { borderColor: '#fff', borderWidth: 2 }, data: rows.map((d) => ({ name: d.name, value: d.value })),
+    }],
   }
 })
 const rankingOption = computed(() => {
@@ -56,12 +63,12 @@ const rankingOption = computed(() => {
   if (!chart) return null
   const rows = [...chart.data].reverse()
   return {
-    color: ['#1f5e57'], tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: 96, right: 30, top: 8, bottom: 24 },
-    xAxis: { type: 'value', ...axis }, yAxis: { type: 'category', data: rows.map((r) => r.name), axisLabel: { color: '#4c5a57' }, axisLine: { show: false }, axisTick: { show: false } },
-    series: [{ type: 'bar', data: rows.map((r) => r.value), barMaxWidth: 16, label: { show: true, position: 'right', color: '#4c5a57' }, itemStyle: { borderRadius: [0, 4, 4, 0] } }],
+    color: ['#2F6FC2'], tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: 92, right: 34, top: 8, bottom: 24 },
+    xAxis: { type: 'value', ...axis }, yAxis: { type: 'category', data: rows.map((r) => r.name), axisLabel: { color: '#4b5765' }, axisLine: { show: false }, axisTick: { show: false } },
+    series: [{ type: 'bar', data: rows.map((r) => r.value), barMaxWidth: 16, label: { show: true, position: 'right', color: '#4b5765' }, itemStyle: { borderRadius: [0, 4, 4, 0] } }],
   }
 })
-const LEVEL_COLOR = { RED: '#c0352b', YELLOW: '#d9a400', BLUE: '#2a6aa8' }
+const LEVEL_COLOR = { RED: '#c62f2b', YELLOW: '#d9a400', BLUE: '#0a7e9c' }
 const distributionOption = computed(() => {
   const chart = data.value?.charts.distribution
   if (!chart) return null
@@ -69,8 +76,8 @@ const distributionOption = computed(() => {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: 40, right: 16, top: 26, bottom: 28 },
     xAxis: { type: 'category', data: chart.data.map((d) => d.name), ...axis }, yAxis: { type: 'value', ...axis, minInterval: 1 },
     series: [{
-      type: 'bar', barMaxWidth: 46, label: { show: true, position: 'top', color: '#4c5a57' },
-      data: chart.data.map((d) => ({ value: d.value, itemStyle: { color: LEVEL_COLOR[d.level] || '#3f9b8f', borderRadius: [4, 4, 0, 0] } })),
+      type: 'bar', barMaxWidth: 46, label: { show: true, position: 'top', color: '#4b5765' },
+      data: chart.data.map((d) => ({ value: d.value, itemStyle: { color: LEVEL_COLOR[d.level] || '#2F6FC2', borderRadius: [4, 4, 0, 0] } })),
     }],
   }
 })
@@ -115,10 +122,10 @@ onMounted(() => setPreset('30d'))
       <button v-if="can('stats:export')" class="btn sm" @click="exportFile('csv')">导出 CSV</button>
     </div>
 
-    <div class="grid g6">
-      <div v-for="k in data.kpis" :key="k.name" class="card kpi">
+    <div class="stats">
+      <div v-for="k in data.kpis" :key="k.name" class="stat">
         <span class="label">{{ k.name }}</span>
-        <span class="value" :style="k.unit === 'cents' ? 'font-size: 1.2rem' : ''">{{ formatKpi(k) }}<small v-if="unitOf(k) && k.value !== null">{{ unitOf(k) }}</small></span>
+        <span class="value" >{{ formatKpi(k) }}<small v-if="unitOf(k) && k.value !== null">{{ unitOf(k) }}</small></span>
         <span class="delta">
           <span>环比 <b :class="deltaClass(k, k.mom)">{{ deltaText(k.mom) }}</b></span>
           <span>同比 <b :class="deltaClass(k, k.yoy)">{{ deltaText(k.yoy) }}</b></span>
@@ -127,15 +134,15 @@ onMounted(() => setPreset('30d'))
       </div>
     </div>
 
-    <div class="grid g2">
-      <section class="card"><h3 class="mb">{{ data.charts.trend.title }}</h3><EChart :option="trendOption" /></section>
-      <section class="card"><h3 class="mb">{{ data.charts.share.title }}</h3><EChart :option="shareOption" /></section>
-      <section class="card"><h3 class="mb">{{ data.charts.ranking.title }}</h3><EChart :option="rankingOption" /></section>
-      <section class="card"><h3 class="mb">{{ data.charts.distribution.title }}</h3><EChart :option="distributionOption" /></section>
+    <section><h2 class="mb">{{ data.charts.trend.title }}</h2><EChart :option="trendOption" height="300px" /></section>
+    <div class="grid g3">
+      <section><h2 class="mb">{{ data.charts.share.title }}</h2><EChart :option="shareOption" height="260px" /></section>
+      <section><h2 class="mb">{{ data.charts.ranking.title }}</h2><EChart :option="rankingOption" height="260px" /></section>
+      <section><h2 class="mb">{{ data.charts.distribution.title }}</h2><EChart :option="distributionOption" height="260px" /></section>
     </div>
 
     <section v-if="data.alert_timeliness" class="card">
-      <h3 class="mb">预警处置时效</h3>
+      <h2 class="mb">预警处置时效</h2>
       <div class="row" style="gap: 28px">
         <span>预警总数 <b class="num">{{ data.alert_timeliness.total }}</b></span>
         <span>响应中位数 <b class="num">{{ data.alert_timeliness.median_response_minutes ?? '—' }}</b> 分钟</span>

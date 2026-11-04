@@ -87,8 +87,8 @@ onUnmounted(() => {
           <b>{{ o.item_name }}</b>
           <span class="small" style="color: var(--red)">请在 {{ dt(o.deadline_at) }} 前响应</span>
         </div>
-        <div class="small">{{ dt(o.scheduled_start) }} · {{ o.elder_name }} · {{ o.disability_label }}</div>
-        <div class="small muted">{{ o.address }}<template v-if="o.remark"> · {{ o.remark }}</template></div>
+        <div class="small">{{ dt(o.scheduled_start) }}　{{ o.elder_name }}　{{ o.disability_label }}</div>
+        <div class="small muted">{{ o.address }}<template v-if="o.remark">　{{ o.remark }}</template></div>
         <div class="row">
           <button class="btn primary grow" @click="accept(o)">接单</button>
           <button class="btn" @click="rejecting = o">拒单</button>

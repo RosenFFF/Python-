@@ -88,7 +88,7 @@ onMounted(load)
         <table>
           <tbody>
             <tr v-for="c in items" :key="c.key">
-              <td>{{ c.description }}<div class="small muted">{{ c.key }}<template v-if="c.version"> · v{{ c.version }} · {{ dt(c.updated_at) }}</template></div></td>
+              <td>{{ c.description }}<div class="small muted">{{ c.key }}<template v-if="c.version">　v{{ c.version }}　{{ dt(c.updated_at) }}</template></div></td>
               <td class="num right" style="max-width: 180px; word-break: break-all"><span :class="typeof c.value === 'object' ? 'small' : ''">{{ show(c.value) }}</span></td>
               <td class="right"><button class="btn sm" @click="start(c)">修改</button></td>
             </tr>
@@ -119,7 +119,7 @@ onMounted(load)
       <template #foot><button class="btn primary" @click="save">保存</button></template>
     </Modal>
 
-    <Modal v-if="policy.target" :title="`${policy.target.disability_label} · ${policy.target.difficulty_label}`" @close="policy.target = null">
+    <Modal v-if="policy.target" :title="`${policy.target.disability_label}　${policy.target.difficulty_label}`" @close="policy.target = null">
       <div class="form-grid">
         <label class="field"><span>政府补贴比例</span><input v-model="policy.gov" type="number" step="0.05" min="0" max="1" /></label>
         <label class="field"><span>长护险比例</span><input v-model="policy.ltci" type="number" step="0.05" min="0" max="1" /></label>

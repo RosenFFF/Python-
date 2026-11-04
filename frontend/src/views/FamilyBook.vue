@@ -119,7 +119,7 @@ onMounted(load)
 
       <div class="field"><span>服务项目</span></div>
       <div class="elder-tiles">
-        <button v-for="i in items" :key="i.id" type="button" class="tile" :style="form.item_id === i.id ? 'border-color: var(--pine-700); background: var(--pine-50)' : ''" @click="form.item_id = i.id">
+        <button v-for="i in items" :key="i.id" type="button" class="tile" :style="form.item_id === i.id ? 'border-color: var(--brand-700); background: var(--brand-50)' : ''" @click="form.item_id = i.id">
           {{ i.name }}
           <small>¥{{ yuan(i.unit_price) }} / {{ i.pricing_label }}，约 {{ i.standard_minutes }} 分钟</small>
         </button>

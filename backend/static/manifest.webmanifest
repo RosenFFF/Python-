@@ -4,7 +4,7 @@
   "description": "社区智慧养老服务与健康监测平台",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f3ec",
-  "theme_color": "#1f5e57",
+  "background_color": "#eff3f8",
+  "theme_color": "#25518f",
   "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }
