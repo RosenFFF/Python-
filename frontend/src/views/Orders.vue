@@ -26,6 +26,7 @@ onMounted(load)
 
 <template>
   <div class="card">
+    <h1 v-if="isRole('elder_family')" class="mb">我的服务</h1>
     <div class="filters">
       <label class="field"><span>状态</span>
         <select v-model="filters.status" @change="filters.page = 1">
@@ -36,7 +37,21 @@ onMounted(load)
       <label v-if="!isRole('elder_family')" class="field"><span>工单号或老人姓名</span><input v-model="filters.keyword" @keyup.enter="filters.page = 1; load()" /></label>
       <button v-if="!isRole('elder_family')" class="btn" @click="filters.page = 1; load()">查询</button>
     </div>
-    <div class="table-wrap">
+    <div v-if="isRole('elder_family')" class="order-cards">
+      <div v-for="o in data.items" :key="o.id" class="order-card" @click="open(o)">
+        <div class="row between">
+          <b>{{ o.item_name }}</b>
+          <span class="tag" :class="statusColor(o.status)">{{ o.status_label }}</span>
+        </div>
+        <div class="num">{{ dt(o.scheduled_start) }}</div>
+        <div class="row between">
+          <span class="small muted">{{ o.elder_name }}<template v-if="o.caregiver_name">，护理员 {{ o.caregiver_name }}</template></span>
+          <button class="btn sm" @click.stop="open(o)">查看</button>
+        </div>
+      </div>
+      <div v-if="!data.items.length" class="empty">还没有服务记录</div>
+    </div>
+    <div v-else class="table-wrap">
       <table>
         <thead><tr><th>工单号</th><th>老人</th><th>服务</th><th>预约时间</th><th>状态</th><th>护理员</th><th>来源</th><th></th></tr></thead>
         <tbody>

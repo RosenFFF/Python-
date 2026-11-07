@@ -89,7 +89,7 @@ class RuleType(StrEnum):
     THRESHOLD = "THRESHOLD"  # 单项越界
     CONSECUTIVE = "CONSECUTIVE"  # 连续异常
     NO_DATA = "NO_DATA"  # 长时间无数据
-    BASELINE = "BASELINE"  # 个体基线偏离（AI 辅助）
+    BASELINE = "BASELINE"  # 个体基线偏离
     MANUAL = "MANUAL"  # 人工触发（SOS、现场异常）
 
 

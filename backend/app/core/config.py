@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True
     sms_provider: Literal["mock"] = "mock"
 
-    # AI 辅助：不配置时走本地规则，配置后调用任意 OpenAI 兼容接口。
+    # 预约解析与健康摘要：不配置时走本地规则，配置后调用任意 OpenAI 兼容接口。
     llm_base_url: str = ""
     llm_api_key: str = ""
     llm_model: str = ""

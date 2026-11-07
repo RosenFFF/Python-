@@ -68,6 +68,42 @@ const groups = computed(() => {
 
 const orgLabel = computed(() => state.user?.grid_name || state.user?.community_name || state.user?.org_name || '')
 
+// 家属和护理员在手机上用 H5 布局：顶部标题栏 + 底部标签栏，管理端仍是侧栏布局
+const narrowQuery = window.matchMedia('(max-width: 760px)')
+const narrow = ref(narrowQuery.matches)
+const onNarrow = (event) => { narrow.value = event.matches }
+const h5 = computed(() => narrow.value && !!state.user && isRole('elder_family', 'caregiver'))
+const showMe = ref(false)
+
+const ICONS = {
+  home: 'M4 11.5 12 5l8 6.5M6.5 10v9h11v-9',
+  book: 'M5 6.5h14v13H5zM5 10.5h14M9 4v4M15 4v4M12 13v4M10 15h4',
+  list: 'M8 5h8v3H8zM6 6.5H5v14h14v-14h-1M8.5 12h7M8.5 16h5',
+  heart: 'M12 19.5s-7-4.300-7-9.300A3.900 3.900 0 0 1 12 8a3.900 3.900 0 0 1 7 2.200c0 5-7 9.300-7 9.300zM6 13h3l1.500-2.500 2 4 1.500-2.500H18',
+  me: 'M12 12.500a3.800 3.800 0 1 0 0-7.600 3.800 3.800 0 0 0 0 7.600zM5 20c.900-3.400 3.700-5.300 7-5.300s6.100 1.900 7 5.300',
+  bell: 'M6.500 16.500V11a5.500 5.500 0 0 1 11 0v5.500l1.500 1.500H5zM10 20.500h4',
+  back: 'M14.500 5.500 8 12l6.500 6.500',
+}
+const tabs = computed(() => (isRole('caregiver')
+  ? [{ to: '/cg', text: '今日工单', icon: 'list', on: (p) => p.startsWith('/cg') }]
+  : [
+      { to: '/family', text: '首页', icon: 'home', on: (p) => p === '/family' },
+      { to: '/family/book', text: '预约', icon: 'book', on: (p) => p.startsWith('/family/book') },
+      { to: '/orders', text: '服务', icon: 'list', on: (p) => p.startsWith('/orders') },
+      { to: '/family/health', text: '健康', icon: 'heart', on: (p) => p.startsWith('/family/health') },
+    ]))
+const isTabRoot = computed(() => tabs.value.some((t) => t.to === route.path))
+
+function goBack() {
+  if (window.history.state?.back) router.back()
+  else router.push(tabs.value[0].to)
+}
+
+function fromSheet(action) {
+  showMe.value = false
+  action()
+}
+
 const notes = ref({ unread: 0, items: [] })
 const showNotes = ref(false)
 const clockInfo = ref(null)
@@ -137,9 +173,14 @@ function signOut() {
 onMounted(() => {
   refreshNotes()
   timer = setInterval(refreshNotes, 15000)
+  narrowQuery.addEventListener('change', onNarrow)
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  clearInterval(timer)
+  narrowQuery.removeEventListener('change', onNarrow)
+})
 watch(() => state.user?.id, refreshNotes)
+watch(() => route.fullPath, () => { showNotes.value = false; showMe.value = false })
 </script>
 
 <template>
@@ -151,6 +192,64 @@ watch(() => state.user?.id, refreshNotes)
 
   <transition name="shell" mode="out-in">
     <router-view v-if="bare" />
+
+    <div v-else-if="h5" class="h5">
+      <header class="h5-head">
+        <button v-if="!isTabRoot" class="icon-btn" aria-label="返回" @click="goBack">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ICONS.back" /></svg>
+        </button>
+        <span v-else class="brand"><Logo :size="30" /></span>
+        <span class="title">{{ isTabRoot ? '' : route.meta.title }}</span>
+        <span class="bell">
+          <button class="icon-btn" aria-label="消息" @click="showNotes = !showNotes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="ICONS.bell" /></svg>
+          </button>
+          <span v-if="notes.unread" class="badge">{{ notes.unread > 99 ? '99+' : notes.unread }}</span>
+        </span>
+      </header>
+      <div v-if="!state.online" class="offline-bar">
+        当前处于离线状态<span v-if="offlineState.pending">，{{ offlineState.pending }} 条操作待同步，联网后自动提交</span>
+      </div>
+      <main class="content">
+        <router-view v-slot="{ Component }">
+          <transition name="page" mode="out-in">
+            <component :is="Component" :key="route.fullPath" />
+          </transition>
+        </router-view>
+      </main>
+      <nav class="tabbar" aria-label="主导航">
+        <router-link v-for="t in tabs" :key="t.to" :to="t.to" :class="{ on: t.on(route.path) }">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="ICONS[t.icon]" /></svg>
+          {{ t.text }}
+        </router-link>
+        <button :class="{ on: showMe }" @click="showMe = true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="ICONS.me" /></svg>
+          我的
+        </button>
+      </nav>
+      <div v-if="showMe" class="sheet-mask" @click.self="showMe = false">
+        <div class="me-sheet" role="dialog" aria-label="我的">
+          <div class="grabber"></div>
+          <div class="me-who">
+            <b>{{ state.user.display_name }}</b>
+            <div class="small muted">{{ state.user.role_name }}<template v-if="orgLabel">，{{ orgLabel }}</template></div>
+          </div>
+          <router-link v-if="isRole('elder_family')" class="me-row" to="/family/bills">我的账单<span class="muted">›</span></router-link>
+          <button class="me-row" :aria-pressed="state.elderMode" @click="setElderMode(!state.elderMode)">
+            大字模式<span class="switch" :class="{ on: state.elderMode }"></span>
+          </button>
+          <button class="me-row" @click="fromSheet(readAloud)">朗读本页<span class="muted">›</span></button>
+          <div v-if="state.meta?.demo_mode && clockInfo && can('dispatch:manage', 'alert:handle', 'offer:respond')" class="me-row demo">
+            <span>演示时钟 <span class="num small">{{ dt(clockInfo.now) }}</span></span>
+            <span class="row">
+              <button class="btn sm" :disabled="jumping" @click="advance(31)">+31 分钟</button>
+              <button v-if="clockInfo.offset_minutes" class="btn sm ghost" @click="resetClock">还原</button>
+            </span>
+          </div>
+          <button class="btn block mt" @click="fromSheet(signOut)">退出登录</button>
+        </div>
+      </div>
+    </div>
 
     <div v-else-if="state.user" class="shell">
       <aside class="side">
@@ -192,20 +291,6 @@ watch(() => state.user?.id, refreshNotes)
               <button class="btn sm ghost" @click="showNotes = !showNotes">消息</button>
               <span v-if="notes.unread" class="badge">{{ notes.unread > 99 ? '99+' : notes.unread }}</span>
             </span>
-            <div v-if="showNotes" class="drawer">
-              <div class="row between" style="padding: 12px 16px 6px">
-                <b>消息通知</b>
-                <button class="btn sm ghost" @click="readAll">全部已读</button>
-              </div>
-              <div v-if="!notes.items.length" class="empty">暂无消息</div>
-              <div v-for="n in notes.items" :key="n.id" class="note-item" :class="{ unread: !n.read_at }" @click="openNote(n)">
-                <div class="row between">
-                  <b class="small" :class="`level-${n.level}`">{{ n.title }}</b>
-                  <span class="muted small nowrap">{{ dt(n.created_at) }}</span>
-                </div>
-                <div class="small" style="color: var(--ink-2)">{{ n.body }}</div>
-              </div>
-            </div>
           </header>
           <main class="content">
             <router-view v-slot="{ Component }">
@@ -218,4 +303,19 @@ watch(() => state.user?.id, refreshNotes)
       </div>
     </div>
   </transition>
+
+  <div v-if="showNotes && state.user && !bare" class="drawer" :class="{ wide: h5 }">
+    <div class="row between" style="padding: 12px 16px 6px">
+      <b>消息通知</b>
+      <button class="btn sm ghost" @click="readAll">全部已读</button>
+    </div>
+    <div v-if="!notes.items.length" class="empty">暂无消息</div>
+    <div v-for="n in notes.items" :key="n.id" class="note-item" :class="{ unread: !n.read_at }" @click="openNote(n)">
+      <div class="row between">
+        <b class="small" :class="`level-${n.level}`">{{ n.title }}</b>
+        <span class="muted small nowrap">{{ dt(n.created_at) }}</span>
+      </div>
+      <div class="small" style="color: var(--ink-2)">{{ n.body }}</div>
+    </div>
+  </div>
 </template>

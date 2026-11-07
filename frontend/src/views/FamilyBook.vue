@@ -83,8 +83,8 @@ onMounted(load)
 
     <section class="card col">
       <h2>说一句话就能预约</h2>
-      <div class="row">
-        <input v-model="sentence" class="grow" style="width: auto" placeholder="比如：帮我约明天下午两点助浴" @keyup.enter="parseSentence" />
+      <div class="row say-row">
+        <input v-model="sentence" class="grow" style="width: auto; min-width: 12em" placeholder="比如：帮我约明天下午两点助浴" @keyup.enter="parseSentence" />
         <button v-if="voiceSupported()" class="btn" :disabled="listening" @click="startVoice">{{ listening ? '正在听…' : '语音' }}</button>
         <button class="btn" @click="parseSentence">识别</button>
       </div>

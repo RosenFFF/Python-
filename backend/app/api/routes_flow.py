@@ -400,22 +400,22 @@ def performance(month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"), sort: st
     return quality_service.performance(db, actor, month, sort)
 
 
-# ---------- AI 辅助 ----------
-@router.post("/ai/parse-booking", tags=["AI 辅助"])
+# ---------- 预约解析与健康分析 ----------
+@router.post("/ai/parse-booking", tags=["预约解析与健康分析"])
 def parse_booking(body: s.ParseBookingIn, actor: Actor = Depends(require("order:create")), db: Session = Depends(get_db)):
     return ai_service.parse_booking(db, body.text)
 
 
-@router.get("/ai/elders/{elder_id}/summary", tags=["AI 辅助"])
+@router.get("/ai/elders/{elder_id}/summary", tags=["预约解析与健康分析"])
 def health_summary(elder_id: int, actor: Actor = Depends(require("health:read")), db: Session = Depends(get_db)):
     return ai_service.health_summary(db, actor, elder_id)
 
 
-@router.get("/ai/top-risk", tags=["AI 辅助"])
+@router.get("/ai/top-risk", tags=["预约解析与健康分析"])
 def top_risk(limit: int = Query(10, le=50), actor: Actor = Depends(require("alert:handle")), db: Session = Depends(get_db)):
     return ai_service.top_risk(db, actor, limit)
 
 
-@router.get("/ai/status", tags=["AI 辅助"])
+@router.get("/ai/status", tags=["预约解析与健康分析"])
 def ai_status(actor: Actor = Depends(get_actor)):
     return {"llm_enabled": ai_service.llm_enabled()}

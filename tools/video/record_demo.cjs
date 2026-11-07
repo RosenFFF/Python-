@@ -1,6 +1,6 @@
 // 录制演示视频：驱动真实系统走完流程，用 CDP 截屏帧，配合旁白时长控制节奏。
 // 用法：node tools/video/record_demo.cjs <baseUrl> <工作目录（含 tts 产物）> <现场照片> <设备密钥>
-const { chromium } = require('playwright-core')
+const { chromium, devices } = require('playwright-core')
 const { execFileSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
@@ -22,56 +22,49 @@ const frames = []
 let page
 let context
 let startedAt
-let cdp
 
-async function caption(text) {
-  await page.evaluate((value) => {
-    let el = document.getElementById('demo-caption')
-    if (!el) {
-      el = document.createElement('div')
-      el.id = 'demo-caption'
-      el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:1120px;width:calc(100% - 80px);background:rgba(16,32,58,.88);color:#fff;font:500 19px/1.5 "Microsoft YaHei",sans-serif;padding:9px 18px;border-radius:8px;z-index:99999;text-align:center;pointer-events:none'
-      document.body.appendChild(el)
-    }
-    el.textContent = value
-    el.style.display = value ? 'block' : 'none'
-  }, text).catch(() => {})
+// 两台“设备”：管理端用 1280×720 桌面浏览器，家属端和护理员端用浏览器的手机模拟（iPhone 13）。
+// 同一时刻只录正在演示的那一台，帧上标注来源，合成时手机画面放进调试工具的设备模式框里。
+// 字幕不再注入页面，由 mux.py 按旁白时间轴烧录。
+const desk = { name: 'desk' }
+const phone = { name: 'phone' }
+let active = null
+
+function attach(target) {
+  target.cdp.on('Page.screencastFrame', async ({ data, sessionId }) => {
+    await target.cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {})
+    if (active !== target) return
+    const index = frames.length
+    frames.push({ t: Date.now() / 1000, src: target.name })
+    fs.writeFileSync(path.join(FRAMES, `${String(index).padStart(6, '0')}.jpg`), Buffer.from(data, 'base64'))
+  })
 }
 
-// 字幕跟随旁白分句显示，页面跳转后会重新注入
-let currentLines = []
-let captionTimer
-function playCaptions(text, seconds) {
-  clearInterval(captionTimer)
-  const parts = text.split(/(?<=[。！？])/).flatMap((s) => (s.length > 42 ? s.split(/(?<=[，；：])/) : [s])).filter(Boolean)
-  const lines = []
-  for (const part of parts) {
-    if (lines.length && (lines[lines.length - 1] + part).length <= 42) lines[lines.length - 1] += part
-    else lines.push(part)
-  }
-  currentLines = lines
-  const total = lines.reduce((sum, line) => sum + line.length, 0)
-  const begin = Date.now()
-  const show = () => {
-    const elapsed = (Date.now() - begin) / 1000
-    let acc = 0
-    let line = lines[lines.length - 1]
-    for (const item of lines) {
-      acc += (item.length / total) * seconds
-      if (elapsed < acc) { line = item; break }
-    }
-    caption(line)
-  }
-  show()
-  captionTimer = setInterval(show, 350)
+async function use(target) {
+  page = target.page
+  context = target.context
+  if (active === target) return
+  if (active) await active.cdp.send('Page.stopScreencast').catch(() => {})
+  active = target
+  const size = target === phone ? { maxWidth: 780, maxHeight: 1688 } : { maxWidth: 1280, maxHeight: 720 }
+  await target.cdp.send('Page.startScreencast', { format: 'jpeg', quality: 82, everyNthFrame: 1, ...size })
 }
 
-async function scene(id, action) {
-  const info = config.scenes.find((s) => s.id === id)
+// 在不录制的那台设备上做准备工作，不打断当前画面
+async function behind(target, fn) {
+  const saved = [page, context]
+  page = target.page
+  context = target.context
+  try { await fn() } finally { [page, context] = saved }
+}
+
+const PHONE_SCENES = new Set(['family_home', 'family_book', 'family_result', 'cg_today', 'cg_far', 'cg_exec', 'cg_out', 'family_detail', 'offline'])
+
+async function scene(id, action, device = PHONE_SCENES.has(id) ? phone : desk) {
   const seconds = durations[id]
+  await use(device)
   const at = (Date.now() - startedAt) / 1000
-  timeline.push({ id, at, seconds })
-  playCaptions(info.text, seconds)
+  timeline.push({ id, at, seconds, device: device.name })
   const begin = Date.now()
   try {
     if (action) await action()
@@ -124,6 +117,21 @@ const apiCall = (method, url, body) => page.evaluate(async ([m, u, b]) => {
   return data
 }, [method, url, body])
 
+// 用另一个账号直接调接口，不动当前页面的登录状态
+const apiAs = (username, method, url, body) => page.evaluate(async ([user, password, m, u, b]) => {
+  const login = await fetch('/api/auth/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password }),
+  })
+  const { access_token: token } = await login.json()
+  const response = await fetch(`/api${u}`, {
+    method: m, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: b ? JSON.stringify(b) : undefined,
+  })
+  const data = await response.json()
+  if (!response.ok) throw new Error(`${u}: ${data.message}`)
+  return data
+}, [username, PASSWORD, method, url, body])
+
 async function openStar() {
   await page.goto(`${BASE}/elders`)
   await page.getByLabel('姓名、编号、完整手机号或身份证').fill('王秀英')
@@ -136,23 +144,22 @@ async function openStar() {
 
 async function main() {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true })
-  context = await browser.newContext({ viewport: { width: 1280, height: 720 }, locale: 'zh-CN' })
-  page = await context.newPage()
-  page.on('pageerror', (e) => console.log('页面错误', e.message))
-
-  cdp = await context.newCDPSession(page)
-  cdp.on('Page.screencastFrame', async ({ data, metadata, sessionId }) => {
-    const index = frames.length
-    frames.push({ t: metadata.timestamp })
-    fs.writeFileSync(path.join(FRAMES, `${String(index).padStart(6, '0')}.jpg`), Buffer.from(data, 'base64'))
-    await cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {})
-  })
+  desk.context = await browser.newContext({ viewport: { width: 1280, height: 720 }, locale: 'zh-CN' })
+  phone.context = await browser.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'zh-CN' })
+  for (const target of [desk, phone]) {
+    target.page = await target.context.newPage()
+    target.page.on('pageerror', (e) => console.log(`页面错误(${target.name})`, e.message))
+    target.cdp = await target.context.newCDPSession(target.page)
+    attach(target)
+  }
+  page = desk.page
+  context = desk.context
 
   await page.setContent(`<!doctype html><html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#163a6b;color:#fff;font-family:'Microsoft YaHei'">
     <div style="font-size:64px;font-weight:700;letter-spacing:.1em">颐护通</div>
     <div style="font-size:26px;margin-top:14px;color:#d5dfec">社区智慧养老服务与健康监测平台</div>
     <div style="font-size:18px;margin-top:30px;color:#a9bad2">2026 年第四届大学生信息系统创新大赛 · Python 编程巅峰赛</div></body></html>`)
-  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 78, maxWidth: 1280, maxHeight: 720, everyNthFrame: 1 })
+  await use(desk)
   startedAt = Date.now()
   // 让静止画面也持续出帧：画面不变时 screencast 不发帧，靠 ffconcat 的时长补齐
   await scene('intro')
@@ -184,10 +191,13 @@ async function main() {
     await tap(page.getByRole('button', { name: '查看进度' }))
     await page.waitForURL(/\/orders\/\d+/)
     bookedId = Number(page.url().split('/').pop())
+    // 桌面端提前登录网格员，下一段直接切过去
+    await behind(desk, () => login('grid_zhang'))
   })
 
   await scene('grid_bench', async () => {
-    await login('grid_zhang')
+    await page.reload()
+    await page.waitForLoadState('networkidle')
     await sleep(500)
     await shot('grid-workbench')
   })
@@ -515,20 +525,20 @@ async function main() {
   })
 
   await scene('offline', async () => {
-    await login('grid_zhang')
-    const items = await apiCall('GET', '/catalog/items?on_shelf_only=true')
+    const grid = (method, url, body) => apiAs('grid_zhang', method, url, body)
+    const items = await grid('GET', '/catalog/items?on_shelf_only=true')
     const meal = items.find((i) => i.name === '助餐')
-    const elders = (await apiCall('GET', '/elders?size=50')).items
-    const now = new Date((await apiCall('GET', '/demo/clock')).now)
+    const elders = (await grid('GET', '/elders?size=50')).items
+    const now = new Date((await grid('GET', '/demo/clock')).now)
     const start = new Date(now.getTime() + 3 * 3600e3)
     const pad = (n) => String(n).padStart(2, '0')
-    const order = await apiCall('POST', '/orders', {
+    const order = await grid('POST', '/orders', {
       elder_id: elders.find((e) => e.name !== '王秀英').id, item_id: meal.id,
       scheduled_start: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}T${pad(start.getHours())}:00:00`,
     })
-    await apiCall('POST', `/orders/${order.id}/accept`, { note: '离线演示' })
-    const me = (await apiCall('GET', '/caregivers')).find((c) => c.name === '王小红')
-    const offer = await apiCall('POST', `/orders/${order.id}/reassign`, { caregiver_id: me.id, reason: '离线演示' })
+    await grid('POST', `/orders/${order.id}/accept`, { note: '离线演示' })
+    const me = (await grid('GET', '/caregivers')).find((c) => c.name === '王小红')
+    const offer = await grid('POST', `/orders/${order.id}/reassign`, { caregiver_id: me.id, reason: '离线演示' })
     await login('cg01')
     await apiCall('POST', `/offers/${offer.offer_id}/accept`)
     await page.reload()
@@ -558,31 +568,27 @@ async function main() {
   })
 
   await scene('outro', async () => {
-    clearInterval(captionTimer)
+    await page.goto('about:blank')
     await page.setContent(`<!doctype html><html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#163a6b;color:#fff;font-family:'Microsoft YaHei'">
       <div style="font-size:54px;font-weight:700;letter-spacing:.1em">颐护通</div>
       <div style="font-size:22px;margin-top:18px;color:#d5dfec">预约 · 派单 · 执行 · 预警 · 评价 · 结算，六条流程闭环</div>
-      <div style="font-size:18px;margin-top:12px;color:#a9bad2">Docker 部署 · AI 辅助 · 适老化 · 离线同步</div></body></html>`)
-    playCaptions(config.scenes.find((s) => s.id === 'outro').text, durations.outro)
+      <div style="font-size:18px;margin-top:12px;color:#a9bad2">Docker 部署 · 适老化设计 · 离线同步 · 健康预警</div></body></html>`)
   })
-  clearInterval(captionTimer)
   await sleep(600)
-  await cdp.send('Page.stopScreencast')
+  await active.cdp.send('Page.stopScreencast')
+  const endAt = Date.now() / 1000
   await browser.close()
 
-  // 帧时间线：每帧持续到下一帧，静止画面靠持续时长保留
-  const base = frames[0].t
-  const list = []
-  const realEnd = (Date.now() - startedAt) / 1000
-  frames.forEach((frame, index) => {
-    const next = index + 1 < frames.length ? frames[index + 1].t - base : Math.max(realEnd, frame.t - base + 0.5)
-    list.push(`file '${path.join(FRAMES, `${String(index).padStart(6, '0')}.jpg`).replace(/\\/g, '/')}'`)
-    list.push(`duration ${Math.max(next - (frame.t - base), 0.001).toFixed(3)}`)
-  })
-  list.push(`file '${path.join(FRAMES, `${String(frames.length - 1).padStart(6, '0')}.jpg`).replace(/\\/g, '/')}'`)
-  fs.writeFileSync(path.join(WORK, 'frames.ffconcat'), `ffconcat version 1.0\n${list.join('\n')}\n`)
-  fs.writeFileSync(path.join(WORK, 'timeline.json'), JSON.stringify({ timeline, firstFrameOffset: 0, frames: frames.length, currentLines }, null, 1))
-  console.log(`录制完成：${frames.length} 帧，时长 ${realEnd.toFixed(0)} 秒`)
+  // 帧清单：时间以录制开始为零点，每帧持续到下一帧，静止画面靠持续时长保留；由 mux.py 合成
+  const zero = startedAt / 1000
+  const list = frames.map((frame, index) => ({
+    file: `${String(index).padStart(6, '0')}.jpg`,
+    src: frame.src,
+    t: Math.max(frame.t - zero, 0),
+  }))
+  fs.writeFileSync(path.join(WORK, 'frames.json'), JSON.stringify({ end: endAt - zero, frames: list }))
+  fs.writeFileSync(path.join(WORK, 'timeline.json'), JSON.stringify({ timeline }, null, 1))
+  console.log(`录制完成：${frames.length} 帧，时长 ${(endAt - zero).toFixed(0)} 秒`)
 }
 
 main().catch((error) => {
