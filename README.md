@@ -2,6 +2,8 @@
 
 覆盖「档案—预约—派单—服务—预警—结算—监管」全链路的社区养老服务平台。后端为 Python（FastAPI + SQLAlchemy），前端为 Vue 3，支持 Docker 一键部署。
 
+源码仓库：<https://github.com/RosenFFF/Python->，以 MIT 许可证开源（见 [LICENSE](LICENSE)）。
+
 设计文档见 [docs/设计文档.docx](docs/设计文档.docx)，答辩要点见 [docs/答辩问答.md](docs/答辩问答.md)，测试结论见 [docs/测试报告.md](docs/测试报告.md)。
 
 ## 快速开始

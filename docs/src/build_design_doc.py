@@ -129,6 +129,8 @@ def code(text):
     run.font.size = Pt(9.5)
 
 
+REPO_URL = "https://github.com/RosenFFF/Python-"
+
 # ---------- 封面 ----------
 for _ in range(5):
     doc.add_paragraph()
@@ -145,6 +147,9 @@ doc.add_paragraph()
 info = doc.add_paragraph()
 info.alignment = WD_ALIGN_PARAGRAPH.CENTER
 info.add_run("设计文档\n2026 年第四届大学生信息系统创新大赛 · Python 编程巅峰赛决赛").font.size = Pt(12)
+repo = doc.add_paragraph()
+repo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+repo.add_run(f"源码仓库：{REPO_URL}").font.size = Pt(11)
 doc.add_page_break()
 toc_title = doc.add_paragraph()
 toc_run = toc_title.add_run("目录")
@@ -444,6 +449,7 @@ table(["情形", "处理"], [
 
 # ---------- 10 部署 ----------
 h1("11 部署与运行")
+p(f"源码仓库：{REPO_URL}（克隆地址 {REPO_URL}.git）。")
 p("Windows 执行 start.ps1，Linux 或 macOS 执行 start.sh，会创建虚拟环境、安装依赖、生成密钥、迁移数据库并写入演示数据，然后打开 http://127.0.0.1:8000。也可以用 docker compose up -d --build。配置项见 .env.example，业务参数在后台修改。")
 p("必须备份 .env 中的字段加密密钥：密钥丢失后，身份证、手机号、地址无法解密。备份文件本身不含密钥。")
 
